@@ -1,7 +1,7 @@
 from typing import List
 
 
-class SongObj:
+class SongObject:
 
     # Constructor
     def __init__(self, rawTrackMeta, rawAlbumMeta, rawArtistMeta, youtubeLink, lyrics):
