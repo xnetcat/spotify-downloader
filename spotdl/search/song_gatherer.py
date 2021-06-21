@@ -1,7 +1,7 @@
-from spotdl.search.songObj import SongObj
-from spotdl.search.spotifyClient import SpotifyClient
-import spotdl.search.audioProvider as audioProvider
-import spotdl.search.metadataProvider as metadataProvider
+from spotdl.search import SongObject
+from spotdl.search import SpotifyClient
+from spotdl.providers import ytm_provider as audio_provider
+from spotdl.providers import metadata_provider
 
 from typing import List, Dict
 from pathlib import Path
@@ -55,7 +55,7 @@ def songobj_from_spotify_url(spotifyURL: str, output_format: str = None):
 
     # Get the Song Metadata
     print(f"Gathering Spotify Metadata for: {spotifyURL}")
-    rawTrackMeta, rawArtistMeta, rawAlbumMeta = metadataProvider.from_url(spotifyURL)
+    rawTrackMeta, rawArtistMeta, rawAlbumMeta = metadata_provider.from_url(spotifyURL)
 
     songName = rawTrackMeta["name"]
     albumName = rawTrackMeta["album"]["name"]
@@ -65,7 +65,7 @@ def songobj_from_spotify_url(spotifyURL: str, output_format: str = None):
         contributingArtists.append(artist["name"])
     duration = round(rawTrackMeta["duration_ms"] / 1000, ndigits=3)
 
-    convertedFileName = SongObj.create_file_name(
+    convertedFileName = SongObject.create_file_name(
         songName, [artist["name"] for artist in rawTrackMeta["artists"]]
     )
 
@@ -82,7 +82,7 @@ def songobj_from_spotify_url(spotifyURL: str, output_format: str = None):
 
     # Get the song's downloadable audio link
     print(f'Searching YouTube for "{displayName}"', end="\r")
-    youtubeLink = audioProvider.search_and_get_best_match(
+    youtubeLink = audio_provider.search_and_get_best_match(
         songName, contributingArtists, albumName, duration, isrc
     )
     if youtubeLink is None:
@@ -95,11 +95,11 @@ def songobj_from_spotify_url(spotifyURL: str, output_format: str = None):
 
     # (try to) Get lyrics from Genius
     try:
-        lyrics = metadataProvider.get_song_lyrics(songName, contributingArtists)
+        lyrics = metadata_provider.get_song_lyrics(songName, contributingArtists)
     except (AttributeError, IndexError):
         lyrics = ""
 
-    return SongObj(rawTrackMeta, rawAlbumMeta, rawArtistMeta, youtubeLink, lyrics)
+    return SongObject(rawTrackMeta, rawAlbumMeta, rawArtistMeta, youtubeLink, lyrics)
 
 
 # =======================
@@ -114,10 +114,10 @@ def from_dump(dataDump: dict):
     youtubeLink = dataDump["youtubeLink"]
     lyrics = dataDump["lyrics"]
 
-    return SongObj(rawTrackMeta, rawAlbumMeta, rawArtistMeta, youtubeLink, lyrics)
+    return SongObject(rawTrackMeta, rawAlbumMeta, rawArtistMeta, youtubeLink, lyrics)
 
 
-def from_search_term(query: str, output_format: str = None) -> List[SongObj]:
+def from_search_term(query: str, output_format: str = None) -> List[SongObject]:
     """
     `str` `query` : what you'd type into Spotify's search box
     Queries Spotify for a song and returns the best match
@@ -138,7 +138,7 @@ def from_search_term(query: str, output_format: str = None) -> List[SongObj]:
         return [song] if song is not None else []
 
 
-def get_album_tracks(albumUrl: str, output_format: str = None) -> List[SongObj]:
+def get_album_tracks(albumUrl: str, output_format: str = None) -> List[SongObject]:
     """
     `str` `albumUrl` : Spotify Url of the album whose tracks are to be
     retrieved
@@ -162,13 +162,13 @@ def get_album_tracks(albumUrl: str, output_format: str = None) -> List[SongObj]:
             "https://open.spotify.com/track/" + track["id"], output_format
         )
 
-        if song is not None and song.get_youtube_link() is not None:
+        if song is not None and song.youtube_link is not None:
             tracks.append(song)
 
     return tracks
 
 
-def get_artist_tracks(artistUrl: str, output_format: str = None) -> List[SongObj]:
+def get_artist_tracks(artistUrl: str, output_format: str = None) -> List[SongObject]:
     """
     `str` `albumUrl` : Spotify Url of the artist whose tracks are to be
     retrieved
@@ -243,13 +243,13 @@ def get_artist_tracks(artistUrl: str, output_format: str = None) -> List[SongObj
             f"https://open.spotify.com/track/{trackUri}", output_format
         )
 
-        if song is not None and song.get_youtube_link() is not None:
+        if song is not None and song.youtube_link is not None:
             artistTracks.append(song)
 
     return artistTracks
 
 
-def get_playlist_tracks(playlistUrl: str, output_format: str = None) -> List[SongObj]:
+def get_playlist_tracks(playlistUrl: str, output_format: str = None) -> List[SongObject]:
     """
     `str` `playlistUrl` : Spotify Url of the album whose tracks are to be
     retrieved
@@ -279,13 +279,13 @@ def get_playlist_tracks(playlistUrl: str, output_format: str = None) -> List[Son
             output_format,
         )
 
-        if song is not None and song.get_youtube_link() is not None:
+        if song is not None and song.youtube_link is not None:
             tracks.append(song)
 
     return tracks
 
 
-def get_saved_tracks(output_format: str = None) -> List[SongObj]:
+def get_saved_tracks(output_format: str = None) -> List[SongObject]:
     """
     returns a `list<songObj>` containing Url's of each track in the user's saved tracks
     """
@@ -313,7 +313,7 @@ def get_saved_tracks(output_format: str = None) -> List[SongObj]:
             output_format,
         )
 
-        if song is not None and song.get_youtube_link() is not None:
+        if song is not None and song.youtube_link is not None:
             tracks.append(song)
 
     return tracks
