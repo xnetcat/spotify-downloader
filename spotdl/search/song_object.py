@@ -6,7 +6,7 @@ class SongObject:
     # Constructor
     def __init__(self, rawTrackMeta, rawAlbumMeta, rawArtistMeta, youtubeLink, lyrics):
         self.__rawTrackMeta = rawTrackMeta
-        self.__rawAlbumMeta = rawArtistMeta
+        self.__rawAlbumMeta = rawAlbumMeta
         self.__rawArtistMeta = rawArtistMeta
         self.__youtubeLink = youtubeLink
         self.__lyrics = lyrics
