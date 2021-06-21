@@ -1,6 +1,5 @@
 from typing import List
-from spotdl.search.song_object import SongObject
-from spotdl.search import songGatherer as song_gatherer
+from spotdl.search import song_gatherer, SongObject
 
 
 def parse_query(query: List[str], format) -> List[SongObject]:
