@@ -1,5 +1,5 @@
-from typing import List, Optional
 from pathlib import Path
+from typing import Dict, List, Optional
 
 from spotdl.providers import metadata_provider
 from spotdl.search import SongObject, SpotifyClient
@@ -204,10 +204,10 @@ def get_artist_tracks(artistUrl: str, output_format: str = None) -> List[SongObj
 
     artist_response = spotify_client.artist_albums(artistUrl, album_type="album,single")
     albums_list = artist_response["items"]
-    albums_object = {}
+    albums_object: Dict[str, str] = {}
+    tracks_object: Dict[str, str] = {}
     artist_tracks = []
     tracks_list = []
-    tracks_object = {}
 
     # Fetch all artist albums
     while artist_response["next"]:

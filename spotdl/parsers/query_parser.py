@@ -28,31 +28,32 @@ def parse_query(query: List[str], format) -> List[SongObject]:
     return songs_list
 
 
-def parse_request(request: str, output_format: str = None):
-    songObjList = []
+def parse_request(request: str, output_format: str = None) -> List[SongObject]:
+    song_list: List[SongObject] = []
     if "open.spotify.com" in request and "track" in request:
         print("Fetching Song...")
-        songObjList = [songobject_from_spotify_url(request, output_format)]
+        song = songobject_from_spotify_url(request, output_format)
+        song_list = [song] if song is not None else []
     elif "open.spotify.com" in request and "album" in request:
         print("Fetching Album...")
-        songObjList = get_album_tracks(request, output_format)
+        song_list = get_album_tracks(request, output_format)
     elif "open.spotify.com" in request and "playlist" in request:
         print("Fetching Playlist...")
-        songObjList = get_playlist_tracks(request, output_format)
+        song_list = get_playlist_tracks(request, output_format)
     elif "open.spotify.com" in request and "artist" in request:
         print("Fetching artist...")
-        songObjList = get_artist_tracks(request, output_format)
+        song_list = get_artist_tracks(request, output_format)
     elif request == "saved":
         print("Fetching Saved Songs...")
-        songObjList = get_saved_tracks(output_format)
+        song_list = get_saved_tracks(output_format)
     else:
         print('Searching Spotify for song named "%s"...' % request)
         try:
-            songObjList = from_search_term(request, output_format)
+            song_list = from_search_term(request, output_format)
         except Exception as e:
             print(e)
 
     # filter out NONE songObj items (already downloaded)
-    songObjList = [songObj for songObj in songObjList if songObj is not None]
+    song_list = [song_object for song_object in song_list if song_object is not None]
 
-    return songObjList
+    return song_list
