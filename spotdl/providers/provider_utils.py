@@ -1,4 +1,8 @@
+import requests
+
+from typing import List
 from rapidfuzz import fuzz
+from bs4 import BeautifulSoup
 
 
 def _match_percentage(str1: str, str2: str, score_cutoff: float = 0) -> float:
@@ -34,6 +38,7 @@ def _match_percentage(str1: str, str2: str, score_cutoff: float = 0) -> float:
 
         return fuzz.partial_ratio(new_str1, new_str2, score_cutoff=score_cutoff)
 
+
 def _parse_duration(duration: str) -> float:
     """
     Convert string value of time (duration: "25:36:59") to a float value of seconds (92219.0)
@@ -51,26 +56,42 @@ def _parse_duration(duration: str) -> float:
     except (ValueError, TypeError, AttributeError):
         return 0.0
 
-def _map_result_to_song_data(result: dict) -> dict:
-    song_data = {}
-    artists = ", ".join(map(lambda a: a["name"], result["artists"]))
-    video_id = result["videoId"]
 
-    # Ignore results without video id
-    if video_id is None:
-        return {}
+def _create_song_title(songName: str, songArtists: List[str]) -> str:
+    joined_artists = ", ".join(songArtists)
+    return f"{joined_artists} - {songName}"
 
-    song_data = {
-        "name": result["title"],
-        "type": result["resultType"],
-        "artist": artists,
-        "length": _parse_duration(result.get("duration", None)),
-        "link": f"https://www.youtube.com/watch?v={video_id}",
-        "position": 0,
+
+def _get_song_lyrics(song_name: str, song_artists: List[str]) -> str:
+    """
+    `str` `song_name` : name of song
+
+    `list<str>` `song_artists` : list containing name of contributing artists
+
+    RETURNS `str`: Lyrics of the song.
+
+    Gets the metadata of the song.
+    """
+
+    headers = {
+        "Authorization": "Bearer alXXDbPZtK1m2RrZ8I4k2Hn8Ahsd0Gh_o076HYvcdlBvmc0ULL1H8Z8xRlew5qaG",
     }
+    api_search_url = "https://api.genius.com/search"
+    search_query = f'{song_name} {", ".join(song_artists)}'
 
-    album = result.get("album")
-    if album:
-        song_data["album"] = album["name"]
+    api_response = requests.get(
+        api_search_url, params={"q": search_query}, headers=headers
+    ).json()
 
-    return song_data
+    song_id = api_response["response"]["hits"][0]["result"]["id"]
+    song_api_url = f"https://api.genius.com/songs/{song_id}"
+
+    api_response = requests.get(song_api_url, headers=headers).json()
+
+    song_url = api_response["response"]["song"]["url"]
+
+    genius_page = requests.get(song_url)
+    soup = BeautifulSoup(genius_page.text, "html.parser")
+    lyrics = soup.select_one("div.lyrics").get_text()
+
+    return lyrics.strip()
