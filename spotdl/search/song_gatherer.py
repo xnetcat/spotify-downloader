@@ -1,10 +1,9 @@
-from typing import List, Dict, Optional
+from typing import List, Optional
 from pathlib import Path
 
-from spotdl.search import SongObject
-from spotdl.search import SpotifyClient
-from spotdl.providers import ytm_provider as audio_provider
 from spotdl.providers import metadata_provider
+from spotdl.search import SongObject, SpotifyClient
+from spotdl.providers import ytm_provider as audio_provider
 
 
 def songobject_from_spotify_url(spotify_url: str, output_format: str = None) -> Optional[SongObject]:
