@@ -12,7 +12,8 @@ def _match_percentage(str1: str, str2: str, score_cutoff: float = 0) -> float:
 
     `str` `str1` : a random sentence
     `str` `str2` : another random sentence
-    `float` `score_cutoff` : minimum score required to consider it a match returns 0 when similarity < score_cutoff
+    `float` `score_cutoff` : minimum score required to consider it a match
+        returns 0 when similarity < score_cutoff
 
     RETURNS `float`
     """

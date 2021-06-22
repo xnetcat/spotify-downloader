@@ -285,7 +285,7 @@ class _ProgressTracker:
         self.status = message
 
         # The change in progress since last update
-        delta = self.progress - self.oldProgress
+        delta = self.progress - self.old_progress
 
         # Update the progress bar
         # ! `start_task` called everytime to ensure progress is remove from indeterminate state
@@ -308,4 +308,4 @@ class _ProgressTracker:
         self.parent.overall_progress += delta
         self.parent.update_overall()
 
-        self.oldProgress = self.progress
+        self.old_progress = self.progress

@@ -70,7 +70,7 @@ def songobject_from_spotify_url(
     # (try to) Get lyrics from Genius
     try:
         lyrics = metadata_provider.get_song_lyrics(song_name, contributing_artists)
-    except:
+    except:  # noqa: E722
         lyrics = ""
 
     return SongObject(
