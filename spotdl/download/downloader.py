@@ -16,12 +16,12 @@ from spotdl.download.trackingfileHandlers import DownloadTracker
 
 class DownloadManager:
     # ! Big pool sizes on slow connections will lead to more incomplete downloads
-    poolSize = 4
+    pool_size = 4
 
     def __init__(self, arguments: Optional[dict] = None):
         # start a server for objects shared across processes
-        self.displayManager = DisplayManager()
-        self.downloadTracker = DownloadTracker()
+        self.display_manager = DisplayManager()
+        self.download_tracker = DownloadTracker()
 
         if sys.platform == "win32":
             # ! ProactorEventLoop is required on Windows to run subprocess asynchronously
@@ -31,11 +31,11 @@ class DownloadManager:
 
         self.loop = asyncio.get_event_loop()
         # ! semaphore is required to limit concurrent asyncio executions
-        self.semaphore = asyncio.Semaphore(self.poolSize)
+        self.semaphore = asyncio.Semaphore(self.pool_size)
 
         # ! thread pool executor is used to run blocking (CPU-bound) code from a thread
         self.thread_executor = concurrent.futures.ThreadPoolExecutor(
-            max_workers=self.poolSize
+            max_workers=self.pool_size
         )
 
         if arguments is None:
@@ -50,57 +50,57 @@ class DownloadManager:
         return self
 
     def __exit__(self, type, value, traceback):
-        self.displayManager.close()
+        self.display_manager.close()
 
-    def download_single_song(self, songObj: SongObject) -> None:
+    def download_single_song(self, song_object: SongObject) -> None:
         """
-        `songObj` `song` : song to be downloaded
+        `song_object` `song` : song to be downloaded
 
         RETURNS `~`
 
         downloads the given song
         """
 
-        self.downloadTracker.clear()
-        self.downloadTracker.load_song_list([songObj])
+        self.download_tracker.clear()
+        self.download_tracker.load_song_list([song_object])
 
-        self.displayManager.set_song_count_to(1)
+        self.display_manager.set_song_count_to(1)
 
-        self._download_asynchronously([songObj])
+        self._download_asynchronously([song_object])
 
-    def download_multiple_songs(self, songObjList: List[SongObject]) -> None:
+    def download_multiple_songs(self, song_list: List[SongObject]) -> None:
         """
-        `list<songObj>` `songObjList` : list of songs to be downloaded
+        `list<song_object>` `song_list` : list of songs to be downloaded
 
         RETURNS `~`
 
         downloads the given songs in parallel
         """
 
-        self.downloadTracker.clear()
-        self.downloadTracker.load_song_list(songObjList)
+        self.download_tracker.clear()
+        self.download_tracker.load_song_list(song_list)
 
-        self.displayManager.set_song_count_to(len(songObjList))
+        self.display_manager.set_song_count_to(len(song_list))
 
-        self._download_asynchronously(songObjList)
+        self._download_asynchronously(song_list)
 
-    def resume_download_from_tracking_file(self, trackingFilePath: str) -> None:
+    def resume_download_from_tracking_file(self, tracking_file_path: str) -> None:
         """
-        `str` `trackingFilePath` : path to a .spotdlTrackingFile
+        `str` `tracking_file_path` : path to a .spotdlTrackingFile
 
         RETURNS `~`
 
         downloads songs present on the .spotdlTrackingFile in parallel
         """
 
-        self.downloadTracker.clear()
-        self.downloadTracker.load_tracking_file(trackingFilePath)
+        self.download_tracker.clear()
+        self.download_tracker.load_tracking_file(tracking_file_path)
 
-        songObjList = self.downloadTracker.get_song_list()
+        song_list = self.download_tracker.get_song_list()
 
-        self.displayManager.set_song_count_to(len(songObjList))
+        self.display_manager.set_song_count_to(len(song_list))
 
-        self._download_asynchronously(songObjList)
+        self._download_asynchronously(song_list)
 
     def _download_asynchronously(self, song_obj_list):
         tasks = [self._pool_download(song) for song in song_obj_list]
@@ -116,16 +116,16 @@ class DownloadManager:
         async with self.semaphore:
             return await self.download_song(song_obj)
 
-    async def download_song(self, songObj: SongObject) -> None:
+    async def download_song(self, song_object: SongObject) -> None:
         """
-        `songObj` `songObj` : song to be downloaded
+        `song_object` `song_object` : song to be downloaded
 
         RETURNS `~`
 
         Downloads, Converts, Normalizes song & embeds metadata as ID3 tags.
         """
 
-        dispayProgressTracker = self.displayManager.new_progress_tracker(songObj)
+        display_progress_tracker = self.display_manager.new_progress_tracker(song_object)
 
         # ! since most errors are expected to happen within this function, we wrap in
         # ! exception catcher to prevent blocking on multiple downloads
@@ -138,100 +138,100 @@ class DownloadManager:
             # ! platform agnostic
 
             # Create a .\Temp folder if not present
-            tempFolder = Path(".", "Temp")
+            temp_folder = Path(".", "Temp")
 
-            if not tempFolder.exists():
-                tempFolder.mkdir()
+            if not temp_folder.exists():
+                temp_folder.mkdir()
 
-            convertedFileName = songObj.file_name
+            converted_file_name = song_object.file_name
 
-            convertedFilePath = Path(
-                ".", f"{convertedFileName}.{self.arguments['format']}"
+            converted_file_path = Path(
+                ".", f"{converted_file_name}.{self.arguments['format']}"
             )
 
             # if a song is already downloaded skip it
-            if convertedFilePath.is_file():
-                if self.displayManager:
-                    dispayProgressTracker.notify_download_skip()
-                if self.downloadTracker:
-                    self.downloadTracker.notify_download_completion(songObj)
+            if converted_file_path.is_file():
+                if self.display_manager:
+                    display_progress_tracker.notify_download_skip()
+                if self.download_tracker:
+                    self.download_tracker.notify_download_completion(song_object)
 
                 # ! None is the default return value of all functions, we just explicitly define
                 # ! it here as a continent way to avoid executing the rest of the function.
                 return None
 
             # download Audio from YouTube
-            if dispayProgressTracker:
-                youtubeHandler = YouTube(
-                    url=songObj.youtube_link,
-                    on_progress_callback=dispayProgressTracker.pytube_progress_hook,
+            if display_progress_tracker:
+                youtube_handler = YouTube(
+                    url=song_object.youtube_link,
+                    on_progress_callback=display_progress_tracker.pytube_progress_hook,
                 )
 
             else:
-                youtubeHandler = YouTube(songObj.youtube_link)
+                youtube_handler = YouTube(song_object.youtube_link)
 
-            trackAudioStream = (
-                youtubeHandler.streams.filter(only_audio=True)
+            track_audio_stream = (
+                youtube_handler.streams.filter(only_audio=True)
                 .order_by("bitrate")
                 .last()
             )
-            if not trackAudioStream:
+            if not track_audio_stream:
                 print(
-                    f'Unable to get audio stream for "{songObj.song_name}" '
-                    f'by "{songObj.contributing_artists[0]}" '
-                    f'from video "{songObj.youtube_link}"'
+                    f'Unable to get audio stream for "{song_object.song_name}" '
+                    f'by "{song_object.contributing_artists[0]}" '
+                    f'from video "{song_object.youtube_link}"'
                 )
                 return None
 
-            downloadedFilePathString = await self._perform_audio_download_async(
-                convertedFileName, tempFolder, trackAudioStream
+            downloaded_file_path_string = await self._perform_audio_download_async(
+                converted_file_name, temp_folder, track_audio_stream
             )
 
-            if downloadedFilePathString is None:
+            if downloaded_file_path_string is None:
                 return None
 
-            if dispayProgressTracker:
-                dispayProgressTracker.notify_youtube_download_completion()
+            if display_progress_tracker:
+                display_progress_tracker.notify_youtube_download_completion()
 
-            downloadedFilePath = Path(downloadedFilePathString)
+            downloaded_file_path = Path(downloaded_file_path_string)
 
             ffmpeg_success = await ffmpeg.convert(
-                downloaded_file_path=downloadedFilePath,
-                converted_file_path=convertedFilePath,
+                downloaded_file_path=downloaded_file_path,
+                converted_file_path=converted_file_path,
                 output_format=self.arguments["format"],
                 ffmpeg_path=self.arguments["ffmpeg_path"],
             )
 
-            if dispayProgressTracker:
-                dispayProgressTracker.notify_conversion_completion()
+            if display_progress_tracker:
+                display_progress_tracker.notify_conversion_completion()
 
             if ffmpeg_success is False:
                 # delete the file that wasn't successfully converted
-                convertedFilePath.unlink()
+                converted_file_path.unlink()
             else:
                 # if a file was successfully downloaded, tag it
-                set_id3_data(convertedFilePath, songObj, self.arguments["format"])
+                set_id3_data(converted_file_path, song_object, self.arguments["format"])
 
             # Do the necessary cleanup
-            if dispayProgressTracker:
-                dispayProgressTracker.notify_download_completion()
+            if display_progress_tracker:
+                display_progress_tracker.notify_download_completion()
 
-            if self.downloadTracker:
-                self.downloadTracker.notify_download_completion(songObj)
+            if self.download_tracker:
+                self.download_tracker.notify_download_completion(song_object)
 
             # delete the unnecessary YouTube download File
-            if downloadedFilePath and downloadedFilePath.is_file():
-                downloadedFilePath.unlink()
+            if downloaded_file_path and downloaded_file_path.is_file():
+                downloaded_file_path.unlink()
 
         except Exception as e:
             tb = traceback.format_exc()
-            if dispayProgressTracker:
-                dispayProgressTracker.notify_error(e, tb)
+            if display_progress_tracker:
+                display_progress_tracker.notify_error(e, tb)
             else:
                 raise e
 
     async def _perform_audio_download_async(
-        self, convertedFileName, tempFolder, trackAudioStream
+        self, converted_file_name, temp_folder, track_audio_stream
     ):
         # ! The following function calls blocking code, which would block whole event loop.
         # ! Therefore it has to be called in a separate thread via ThreadPoolExecutor. This
@@ -240,26 +240,26 @@ class DownloadManager:
         return await self.loop.run_in_executor(
             self.thread_executor,
             self._perform_audio_download,
-            convertedFileName,
-            tempFolder,
-            trackAudioStream,
+            converted_file_name,
+            temp_folder,
+            track_audio_stream,
         )
 
-    def _perform_audio_download(self, convertedFileName, tempFolder, trackAudioStream):
+    def _perform_audio_download(self, converted_file_name, temp_folder, track_audio_stream):
         # ! The actual download, if there is any error, it'll be here,
         try:
             # ! pyTube will save the song in .\Temp\$songName.mp4 or .webm,
             # ! it doesn't save as '.mp3'
-            downloadedFilePath = trackAudioStream.download(
-                output_path=tempFolder, filename=convertedFileName, skip_existing=False
+            downloaded_file_path = track_audio_stream.download(
+                output_path=temp_folder, filename=converted_file_name, skip_existing=False
             )
-            return downloadedFilePath
+            return downloaded_file_path
         except:  # noqa:E722
             # ! This is equivalent to a failed download, we do nothing, the song remains on
-            # ! downloadTrackers download queue and all is well...
+            # ! download_trackers download queue and all is well...
             # !
             # ! None is again used as a convenient exit
-            tempFiles = Path(tempFolder).glob(f"{convertedFileName}.*")
-            for tempFile in tempFiles:
-                tempFile.unlink()
+            temp_files = Path(temp_folder).glob(f"{converted_file_name}.*")
+            for temp_file in temp_files:
+                temp_file.unlink()
             return None
