@@ -5,11 +5,11 @@ from types import SimpleNamespace
 import pytest
 
 from spotdl.download.downloader import DownloadManager
-from spotdl.search.songObj import SongObj
+from spotdl.search import SongObject
 from spotdl.download import ffmpeg, downloader
 
 
-def create_song_obj(name="test song", artist="test artist") -> SongObj:
+def create_song_obj(name="test song", artist="test artist") -> SongObject:
     artists = [{"name": artist}]
     raw_track_meta = {
         "name": name,
@@ -27,7 +27,7 @@ def create_song_obj(name="test song", artist="test artist") -> SongObj:
     }
     raw_album_meta = {"genres": ["test genre"]}
     raw_artist_meta = {"genres": ["test artist genre"]}
-    return SongObj(
+    return SongObject(
         raw_track_meta,
         raw_album_meta,
         raw_artist_meta,

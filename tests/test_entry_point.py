@@ -1,14 +1,16 @@
-import json
 import sys
+import json
 
 import pytest
 
-from spotdl.__main__ import console_entry_point, help_notice
-from spotdl.download.downloader import DownloadManager
-from spotdl.search.spotifyClient import SpotifyClient
-from spotdl.download import ffmpeg
-
 from tests.utils import tracking_files
+
+from spotdl.download import ffmpeg
+from spotdl.search import SpotifyClient
+from spotdl.__main__ import console_entry_point
+from spotdl.parsers.argument_parser import help_notice
+from spotdl.download.downloader import DownloadManager
+
 
 ORIGINAL_INITIALIZE = SpotifyClient.init
 
