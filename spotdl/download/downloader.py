@@ -1,33 +1,17 @@
-# ===============
-# === Imports ===
-# ===============
-import asyncio
-import concurrent.futures
-from spotdl.download.embed_metadata import set_id3_data
 import sys
+import asyncio
 import traceback
+import concurrent.futures
 
 from pathlib import Path
-
-# ! The following are not used, they are just here for static typechecking with mypy
+from pytube import YouTube
 from typing import List, Optional
 
-from pytube import YouTube
-
+from spotdl.download import ffmpeg
+from spotdl.search import SongObject
+from spotdl.download.embed_metadata import set_id3_data
 from spotdl.download.progressuiHandlers import DisplayManager
 from spotdl.download.trackingfileHandlers import DownloadTracker
-from spotdl.search.songObj import SongObj
-from spotdl.download import ffmpeg
-
-
-# ==========================
-# === Base functionality ===
-# ==========================
-
-
-# ===========================================================
-# === The Download Manager (the tyrannical boss lady/guy) ===
-# ===========================================================
 
 
 class DownloadManager:
@@ -68,7 +52,7 @@ class DownloadManager:
     def __exit__(self, type, value, traceback):
         self.displayManager.close()
 
-    def download_single_song(self, songObj: SongObj) -> None:
+    def download_single_song(self, songObj: SongObject) -> None:
         """
         `songObj` `song` : song to be downloaded
 
@@ -84,7 +68,7 @@ class DownloadManager:
 
         self._download_asynchronously([songObj])
 
-    def download_multiple_songs(self, songObjList: List[SongObj]) -> None:
+    def download_multiple_songs(self, songObjList: List[SongObject]) -> None:
         """
         `list<songObj>` `songObjList` : list of songs to be downloaded
 
@@ -123,7 +107,7 @@ class DownloadManager:
         # call all task asynchronously, and wait until all are finished
         self.loop.run_until_complete(asyncio.gather(*tasks))
 
-    async def _pool_download(self, song_obj: SongObj):
+    async def _pool_download(self, song_obj: SongObject):
         # ! Run asynchronous task in a pool to make sure that all processes
         # ! don't run at once.
 
@@ -132,7 +116,7 @@ class DownloadManager:
         async with self.semaphore:
             return await self.download_song(song_obj)
 
-    async def download_song(self, songObj: SongObj) -> None:
+    async def download_song(self, songObj: SongObject) -> None:
         """
         `songObj` `songObj` : song to be downloaded
 
@@ -159,7 +143,7 @@ class DownloadManager:
             if not tempFolder.exists():
                 tempFolder.mkdir()
 
-            convertedFileName = songObj.get_file_name()
+            convertedFileName = songObj.file_name
 
             convertedFilePath = Path(
                 ".", f"{convertedFileName}.{self.arguments['format']}"
@@ -179,12 +163,12 @@ class DownloadManager:
             # download Audio from YouTube
             if dispayProgressTracker:
                 youtubeHandler = YouTube(
-                    url=songObj.get_youtube_link(),
+                    url=songObj.youtube_link,
                     on_progress_callback=dispayProgressTracker.pytube_progress_hook,
                 )
 
             else:
-                youtubeHandler = YouTube(songObj.get_youtube_link())
+                youtubeHandler = YouTube(songObj.youtube_link)
 
             trackAudioStream = (
                 youtubeHandler.streams.filter(only_audio=True)
@@ -193,9 +177,9 @@ class DownloadManager:
             )
             if not trackAudioStream:
                 print(
-                    f'Unable to get audio stream for "{songObj.get_song_name()}" '
-                    f'by "{songObj.get_contributing_artists()[0]}" '
-                    f'from video "{songObj.get_youtube_link()}"'
+                    f'Unable to get audio stream for "{songObj.song_name}" '
+                    f'by "{songObj.contributing_artists[0]}" '
+                    f'from video "{songObj.youtube_link}"'
                 )
                 return None
 
