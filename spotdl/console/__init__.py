@@ -6,7 +6,7 @@ import pkg_resources
 from spotdl.download import ffmpeg
 from spotdl.parsers import parse_arguments
 from spotdl.parsers.query_parser import parse_query
-from spotdl.search.spotifyClient import SpotifyClient
+from spotdl.search import SpotifyClient
 from spotdl.download.downloader import DownloadManager
 
 
