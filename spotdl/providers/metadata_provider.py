@@ -1,36 +1,37 @@
-from requests import get
-from bs4 import BeautifulSoup
-from spotdl.search.spotifyClient import SpotifyClient
+import requests
+
 from typing import List
+from bs4 import BeautifulSoup
+
+from spotdl.search import SpotifyClient
 
 
-def from_url(spotifyURL: str):
-    if not ("open.spotify.com" in spotifyURL and "track" in spotifyURL):
-        raise Exception("passed URL is not that of a track: %s" % spotifyURL)
+def from_url(spotify_url: str):
+    if not ("open.spotify.com" in spotify_url and "track" in spotify_url):
+        raise Exception(f"passed URL is not that of a track: {spotify_url}")
 
     # query spotify for song, artist, album details
-    spotifyClient = SpotifyClient()
+    spotify_client = SpotifyClient()
 
-    rawTrackMeta = spotifyClient.track(spotifyURL)
+    raw_track_meta = spotify_client.track(spotify_url)
 
-    primaryArtistId = rawTrackMeta["artists"][0]["id"]
-    rawArtistMeta = spotifyClient.artist(primaryArtistId)
+    primary_artist_id = raw_track_meta["artists"][0]["id"]
+    raw_artist_meta = spotify_client.artist(primary_artist_id)
 
-    albumId = rawTrackMeta["album"]["id"]
-    rawAlbumMeta = spotifyClient.album(albumId)
+    albumId = raw_track_meta["album"]["id"]
+    raw_album_meta = spotify_client.album(albumId)
 
-    return rawTrackMeta, rawArtistMeta, rawAlbumMeta
+    return raw_track_meta, raw_artist_meta, raw_album_meta
 
 
 def get_song_lyrics(song_name: str, song_artists: List[str]) -> str:
     """
-    `str` `song_name` : name of song
+    Gets the metadata of the song.
 
+    `str` `song_name` : name of song
     `list<str>` `song_artists` : list containing name of contributing artists
 
-    RETURNS `str`: Lyrics of the song.
-
-    Gets the metadata of the song.
+    returns `str` : Lyrics of the song.
     """
 
     headers = {
@@ -39,18 +40,18 @@ def get_song_lyrics(song_name: str, song_artists: List[str]) -> str:
     api_search_url = "https://api.genius.com/search"
     search_query = f'{song_name} {", ".join(song_artists)}'
 
-    api_response = get(
+    api_response = requests.get(
         api_search_url, params={"q": search_query}, headers=headers
     ).json()
 
     song_id = api_response["response"]["hits"][0]["result"]["id"]
     song_api_url = f"https://api.genius.com/songs/{song_id}"
 
-    api_response = get(song_api_url, headers=headers).json()
+    api_response = requests.get(song_api_url, headers=headers).json()
 
     song_url = api_response["response"]["song"]["url"]
 
-    genius_page = get(song_url)
+    genius_page = requests.get(song_url)
     soup = BeautifulSoup(genius_page.text, "html.parser")
     lyrics = soup.select_one("div.lyrics").get_text()
 
