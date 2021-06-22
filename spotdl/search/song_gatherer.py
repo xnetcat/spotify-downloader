@@ -6,7 +6,9 @@ from spotdl.search import SongObject, SpotifyClient
 from spotdl.providers import ytm_provider as audio_provider
 
 
-def songobject_from_spotify_url(spotify_url: str, output_format: str = None) -> Optional[SongObject]:
+def songobject_from_spotify_url(
+    spotify_url: str, output_format: str = None
+) -> Optional[SongObject]:
     """
     Creates song object using spotfy url
 
@@ -22,7 +24,9 @@ def songobject_from_spotify_url(spotify_url: str, output_format: str = None) -> 
 
     # Get the Song Metadata
     print(f"Gathering Spotify Metadata for: {spotify_url}")
-    raw_track_meta, raw_artist_meta, raw_album_meta = metadata_provider.from_url(spotify_url)
+    raw_track_meta, raw_artist_meta, raw_album_meta = metadata_provider.from_url(
+        spotify_url
+    )
 
     song_name = raw_track_meta["name"]
     album_name = raw_track_meta["album"]["name"]
@@ -37,9 +41,9 @@ def songobject_from_spotify_url(spotify_url: str, output_format: str = None) -> 
     )
 
     # If song name is too long use only first artist
-    if len(converted_file_name)> 250:
+    if len(converted_file_name) > 250:
         converted_file_name = SongObject.create_file_name(
-            song_name, [raw_track_meta["artists"][0]['name']]
+            song_name, [raw_track_meta["artists"][0]["name"]]
         )
 
     converted_file_path = Path(".", f"{converted_file_name}.{output_format}")
@@ -69,7 +73,9 @@ def songobject_from_spotify_url(spotify_url: str, output_format: str = None) -> 
     except:
         lyrics = ""
 
-    return SongObject(raw_track_meta, raw_album_meta, raw_artist_meta, youtube_link, lyrics)
+    return SongObject(
+        raw_track_meta, raw_album_meta, raw_artist_meta, youtube_link, lyrics
+    )
 
 
 def from_search_term(query: str, output_format: str = None) -> List[SongObject]:
@@ -116,12 +122,14 @@ def get_album_tracks(album_url: str, output_format: str = None) -> List[SongObje
     # Get all tracks from album
     while album_response["next"]:
         album_response = spotify_client.next(album_response)
-        album_tracks.extend([
+        album_tracks.extend(
+            [
                 track
                 for track in album_response["items"]
                 # check if track has id
                 if track.get("track", {}).get("id") is not None
-            ])
+            ]
+        )
 
     # Create song objects from track ids
     for track in album_tracks:
@@ -135,7 +143,9 @@ def get_album_tracks(album_url: str, output_format: str = None) -> List[SongObje
     return tracks
 
 
-def get_playlist_tracks(playlist_url: str, output_format: str = None) -> List[SongObject]:
+def get_playlist_tracks(
+    playlist_url: str, output_format: str = None
+) -> List[SongObject]:
     """
     Create and return list containing SongObject for every song in the playlist
 
@@ -227,12 +237,14 @@ def get_artist_tracks(artistUrl: str, output_format: str = None) -> List[SongObj
 
         while album_response["next"]:
             spotify_client.next(album_response)
-            album_tracks.extend([
-                track
-                for track in album_response["items"]
-                # check if track has id
-                if track.get("track", {}).get("id") is not None
-            ])
+            album_tracks.extend(
+                [
+                    track
+                    for track in album_response["items"]
+                    # check if track has id
+                    if track.get("track", {}).get("id") is not None
+                ]
+            )
 
         tracks_list.extend(album_tracks)
 
@@ -329,4 +341,6 @@ def from_dump(data_dump: dict) -> SongObject:
     youtube_link = data_dump["youtube_link"]
     lyrics = data_dump["lyrics"]
 
-    return SongObject(raw_track_meta, raw_album_meta, raw_artist_meta, youtube_link, lyrics)
+    return SongObject(
+        raw_track_meta, raw_album_meta, raw_artist_meta, youtube_link, lyrics
+    )

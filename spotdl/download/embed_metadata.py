@@ -11,7 +11,6 @@ from mutagen.id3 import APIC as AlbumCover, USLT, COMM as Comment
 from spotdl.search.song_object import SongObject
 
 
-
 # Apple has specific tags - see mutagen docs -
 # http://mutagen.readthedocs.io/en/latest/api/mp4.html
 M4A_TAG_PRESET = {
@@ -192,7 +191,9 @@ def _embed_m4a_metadata(audio_file, song_object: SongObject):
     return audio_file
 
 
-def _embed_basic_metadata(audio_file, song_object: SongObject, encoding, preset=TAG_PRESET):
+def _embed_basic_metadata(
+    audio_file, song_object: SongObject, encoding, preset=TAG_PRESET
+):
 
     # set main artist
     artists = song_object.contributing_artists

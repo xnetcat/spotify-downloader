@@ -103,9 +103,7 @@ class SongObject:
         returns songs's display name.
         """
 
-        return str(
-            ", ".join(self.contributing_artists) + " - " + self.song_name
-        )
+        return str(", ".join(self.contributing_artists) + " - " + self.song_name)
 
     @property
     def album_name(self) -> str:

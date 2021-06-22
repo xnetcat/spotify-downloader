@@ -10,7 +10,7 @@ from typing import List, Optional
 from spotdl.providers.provider_utils import (
     _match_percentage,
     _parse_duration,
-    _create_song_title
+    _create_song_title,
 )
 
 
@@ -60,6 +60,7 @@ def _query_and_simplify(search_term: str, filter: str) -> List[dict]:
     search_results = ytm_client.search(search_term, filter=filter)
 
     return list(map(_map_result_to_song_data, search_results))
+
 
 def order_ytm_results(
     results: List[dict],
@@ -199,7 +200,9 @@ def order_ytm_results(
                 # Add album to average_match if song_name == result album
                 # and result album name == song_album_name
                 else:
-                    average_match = (artist_match + album_match + name_match + time_match) / 4
+                    average_match = (
+                        artist_match + album_match + name_match + time_match
+                    ) / 4
             else:
                 average_match = (artist_match + name_match + time_match) / 3
         # Don't add album_match to average_match if we don't have information about the album

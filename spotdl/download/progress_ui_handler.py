@@ -1,3 +1,5 @@
+from typing import Optional
+
 from rich.text import Text
 from rich.theme import Theme
 from rich.progress import Task
@@ -11,8 +13,7 @@ from rich.console import (
     OverflowMethod,
 )
 
-from typing import Optional
-
+from spotdl.search import SongObject
 
 custom_theme = Theme(
     {
@@ -194,9 +195,9 @@ class DisplayManager:
 
 
 class _ProgressTracker:
-    def __init__(self, parent, songObj):
+    def __init__(self, parent, song_object: SongObject):
         self.parent = parent
-        self.songObj = songObj
+        self.song_object = song_object
 
         self.progress = 0
         self.old_progress = 0
@@ -204,7 +205,7 @@ class _ProgressTracker:
         self.status = ""
 
         self.task_id = self.parent._rich_progress_bar.add_task(
-            description=songObj.get_display_name(),
+            description=song_object.display_name,
             process_id=str(self.download_id),
             message="Download Started",
             total=100,
@@ -273,7 +274,7 @@ class _ProgressTracker:
         """
         self.update(message="Error " + self.status)
 
-        message = f"Error: {e}\tWhile {self.status}: {self.songObj.get_display_name()}\n {str(tb)}"
+        message = f"Error: {e}\tWhile {self.status}: {self.song_object.display_name}\n {str(tb)}"
         self.parent.print(message, color="red")
 
     def update(self, message=""):
@@ -291,7 +292,7 @@ class _ProgressTracker:
         self.parent._rich_progress_bar.start_task(self.task_id)
         self.parent._rich_progress_bar.update(
             self.task_id,
-            description=self.songObj.get_display_name(),
+            description=self.song_object.display_name,
             process_id=str(self.download_id),
             message=message,
             completed=self.progress,

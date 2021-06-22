@@ -7,7 +7,7 @@ from spotdl.search.song_gatherer import (
     get_playlist_tracks,
     get_artist_tracks,
     get_saved_tracks,
-    from_search_term
+    from_search_term,
 )
 
 

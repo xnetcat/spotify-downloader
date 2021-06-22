@@ -10,8 +10,8 @@ from typing import List, Optional
 from spotdl.download import ffmpeg
 from spotdl.search import SongObject
 from spotdl.download.embed_metadata import set_id3_data
-from spotdl.download.progressuiHandlers import DisplayManager
-from spotdl.download.trackingfileHandlers import DownloadTracker
+from spotdl.download.progress_ui_handler import DisplayManager
+from spotdl.download.tracking_file_handler import DownloadTracker
 
 
 class DownloadManager:
@@ -125,7 +125,9 @@ class DownloadManager:
         Downloads, Converts, Normalizes song & embeds metadata as ID3 tags.
         """
 
-        display_progress_tracker = self.display_manager.new_progress_tracker(song_object)
+        display_progress_tracker = self.display_manager.new_progress_tracker(
+            song_object
+        )
 
         # ! since most errors are expected to happen within this function, we wrap in
         # ! exception catcher to prevent blocking on multiple downloads
@@ -245,13 +247,17 @@ class DownloadManager:
             track_audio_stream,
         )
 
-    def _perform_audio_download(self, converted_file_name, temp_folder, track_audio_stream):
+    def _perform_audio_download(
+        self, converted_file_name, temp_folder, track_audio_stream
+    ):
         # ! The actual download, if there is any error, it'll be here,
         try:
             # ! pyTube will save the song in .\Temp\$songName.mp4 or .webm,
             # ! it doesn't save as '.mp3'
             downloaded_file_path = track_audio_stream.download(
-                output_path=temp_folder, filename=converted_file_name, skip_existing=False
+                output_path=temp_folder,
+                filename=converted_file_name,
+                skip_existing=False,
             )
             return downloaded_file_path
         except:  # noqa:E722

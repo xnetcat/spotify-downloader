@@ -82,6 +82,11 @@ def parse_arguments():
         default="mp3",
     )
 
+    # Option to enable user auth
+    parser.add_argument(
+        "--user-auth", help="Use User Authentication", action="store_true"
+    )
+
     # Option to specify path to local ffmpeg
     parser.add_argument("-f", "--ffmpeg", help="Path to ffmpeg", dest="ffmpeg")
 

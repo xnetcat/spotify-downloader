@@ -37,6 +37,13 @@ def console_entry_point():
     ):
         sys.exit(1)
 
+    if "saved" in arguments.query and not arguments.user_auth:
+        arguments.user_auth = True
+        print(
+            "Detected 'saved' in command line, but no --user-auth flag. Enabling Anyways."
+        )
+        print("Please Log In...")
+
     # Initialize spotify client
     SpotifyClient.init(
         client_id="5f573c9620494bae87890c0f08a60293",
@@ -54,6 +61,7 @@ def console_entry_point():
     # Start download manager
     with DownloadManager(args_dict) as downloader:
         if not arguments.debug_termination:
+
             def graceful_exit(signal, frame):
                 downloader.display_manager.close()
                 sys.exit(0)
