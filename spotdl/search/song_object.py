@@ -163,10 +163,10 @@ class SongObject:
         # ! internally the only reason this exists is that it helps in saving to disk
 
         return {
-            "youtubeLink": self.__youtubeLink,
-            "rawTrackMeta": self.__rawTrackMeta,
-            "rawAlbumMeta": self.__rawAlbumMeta,
-            "rawArtistMeta": self.__rawArtistMeta,
+            "youtube_link": self.__youtubeLink,
+            "raw_track_meta": self.__rawTrackMeta,
+            "raw_album_meta": self.__rawAlbumMeta,
+            "raw_artist_meta": self.__rawArtistMeta,
             "lyrics": self.__lyrics,
         }
 
