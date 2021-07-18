@@ -18,51 +18,87 @@ from spotdl.providers.provider_utils import (
 ytm_client = YTMusic()
 
 
-def _map_result_to_song_data(result: dict) -> dict:
-    song_data = {}
-    artists = ", ".join(map(lambda a: a["name"], result["artists"]))
-    video_id = result["videoId"]
-
-    # Ignore results without video id
-    if video_id is None:
-        return {}
-
-    song_data = {
-        "name": result["title"],
-        "type": result["resultType"],
-        "artist": artists,
-        "length": _parse_duration(result.get("duration", None)),
-        "link": f"https://www.youtube.com/watch?v={video_id}",
-        "position": 0,
-    }
-
-    album = result.get("album")
-    if album:
-        song_data["album"] = album["name"]
-
-    return song_data
-
-
-def _query_and_simplify(search_term: str, filter: str) -> List[dict]:
+def search_and_get_best_match(
+    song_name: str,
+    song_artists: List[str],
+    song_album_name: str,
+    song_duration: int,
+    isrc: str,
+) -> Optional[str]:
     """
-    `str` `searchTerm` : the search term you would type into YTM's search bar
-    `str` `filter` : Filter for item types
+    `str` `song_name` : name of song
 
-    RETURNS `list<dict>`
+    `list<str>` `song_artists` : list containing name of contributing artists
 
-    For structure of dict, see comment at function declaration
+    `str` `song_album_name` : name of song's album
+
+    `int` `song_duration` : duration of the song
+
+    `str` `isrc` :  code for identifying sound recordings and music video recordings
+
+    RETURNS `str` : link of the best match
     """
 
-    # ! For dict structure, see end of this function (~ln 268, ln 283) and chill, this
-    # ! function ain't soo big, there are plenty of comments and blank lines
+    # if isrc is not None then we try to find song with it
+    if isrc is not None:
+        isrc_results = _query_and_simplify(isrc, "songs")
 
-    # build and POST a query to YTM
-    search_results = ytm_client.search(search_term, filter=filter)
+        if len(isrc_results) == 1:
+            isrc_result = isrc_results[0]
 
-    return list(map(_map_result_to_song_data, search_results))
+            if isrc_result is not None:
+                return isrc_result["link"]
+
+    song_title = _create_song_title(song_name, song_artists)
+
+    # Query YTM by songs only first, this way if we get correct result on the first try
+    # we don't have to make another request to ytmusic api that could result in us
+    # getting rate limited sooner
+    song_results = _query_and_simplify(song_title, "songs")
+
+    # Order results
+    songs = _order_ytm_results(
+        song_results, song_name, song_artists, song_album_name, song_duration
+    )
+
+    # song type results are always more accurate than video type, so if we get score of 80 or above
+    # we are almost 100% sure that this is the correct link
+    if len(songs) != 0:
+        # get the result with highest score
+        best_result = max(songs, key=lambda k: songs[k])
+
+        if songs[best_result] >= 80:
+            return best_result
+
+    # We didn't find the correct song on the first try so now we get video type results
+    # add them to song_results, and get the result with highest score
+    video_results = _query_and_simplify(
+        _create_song_title(song_name, song_artists), filter="videos"
+    )
+
+    # Order video results
+    videos = _order_ytm_results(
+        video_results, song_name, song_artists, song_album_name, song_duration
+    )
+
+    # Merge songs and video results
+    results = {**songs, **videos}
+
+    # No matches found
+    if len(results) == 0:
+        return None
+
+    result_items = list(results.items())
+
+    # Sort results by highest score
+    sorted_results = sorted(result_items, key=lambda x: x[1], reverse=True)
+
+    # ! In theory, the first 'TUPLE' in sorted_results should have the highest match
+    # ! value, we send back only the link
+    return sorted_results[0][0]
 
 
-def order_ytm_results(
+def _order_ytm_results(
     results: List[dict],
     song_name: str,
     song_artists: List[str],
@@ -217,81 +253,45 @@ def order_ytm_results(
     return links_with_match_value
 
 
-def search_and_get_best_match(
-    song_name: str,
-    song_artists: List[str],
-    song_album_name: str,
-    song_duration: int,
-    isrc: str,
-) -> Optional[str]:
+def _map_result_to_song_data(result: dict) -> dict:
+    song_data = {}
+    artists = ", ".join(map(lambda a: a["name"], result["artists"]))
+    video_id = result["videoId"]
+
+    # Ignore results without video id
+    if video_id is None:
+        return {}
+
+    song_data = {
+        "name": result["title"],
+        "type": result["resultType"],
+        "artist": artists,
+        "length": _parse_duration(result.get("duration", None)),
+        "link": f"https://www.youtube.com/watch?v={video_id}",
+        "position": 0,
+    }
+
+    album = result.get("album")
+    if album:
+        song_data["album"] = album["name"]
+
+    return song_data
+
+
+def _query_and_simplify(search_term: str, filter: str) -> List[dict]:
     """
-    `str` `song_name` : name of song
+    `str` `searchTerm` : the search term you would type into YTM's search bar
+    `str` `filter` : Filter for item types
 
-    `list<str>` `song_artists` : list containing name of contributing artists
+    RETURNS `list<dict>`
 
-    `str` `song_album_name` : name of song's album
-
-    `int` `song_duration` : duration of the song
-
-    `str` `isrc` :  code for identifying sound recordings and music video recordings
-
-    RETURNS `str` : link of the best match
+    For structure of dict, see comment at function declaration
     """
 
-    # if isrc is not None then we try to find song with it
-    if isrc is not None:
-        isrc_results = _query_and_simplify(isrc, "songs")
+    # ! For dict structure, see end of this function (~ln 268, ln 283) and chill, this
+    # ! function ain't soo big, there are plenty of comments and blank lines
 
-        if len(isrc_results) == 1:
-            isrc_result = isrc_results[0]
+    # build and POST a query to YTM
+    search_results = ytm_client.search(search_term, filter=filter)
 
-            if isrc_result is not None:
-                return isrc_result["link"]
-
-    song_title = _create_song_title(song_name, song_artists)
-
-    # Query YTM by songs only first, this way if we get correct result on the first try
-    # we don't have to make another request to ytmusic api that could result in us
-    # getting rate limited sooner
-    song_results = _query_and_simplify(song_title, "songs")
-
-    # Order results
-    songs = order_ytm_results(
-        song_results, song_name, song_artists, song_album_name, song_duration
-    )
-
-    # song type results are always more accurate than video type, so if we get score of 80 or above
-    # we are almost 100% sure that this is the correct link
-    if len(songs) != 0:
-        # get the result with highest score
-        best_result = max(songs, key=lambda k: songs[k])
-
-        if songs[best_result] >= 80:
-            return best_result
-
-    # We didn't find the correct song on the first try so now we get video type results
-    # add them to song_results, and get the result with highest score
-    video_results = _query_and_simplify(
-        _create_song_title(song_name, song_artists), filter="videos"
-    )
-
-    # Order video results
-    videos = order_ytm_results(
-        video_results, song_name, song_artists, song_album_name, song_duration
-    )
-
-    # Merge songs and video results
-    results = {**songs, **videos}
-
-    # No matches found
-    if len(results) == 0:
-        return None
-
-    result_items = list(results.items())
-
-    # Sort results by highest score
-    sorted_results = sorted(result_items, key=lambda x: x[1], reverse=True)
-
-    # ! In theory, the first 'TUPLE' in sorted_results should have the highest match
-    # ! value, we send back only the link
-    return sorted_results[0][0]
+    return list(map(_map_result_to_song_data, search_results))

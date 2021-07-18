@@ -1,13 +1,12 @@
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from spotdl.providers import metadata_provider
+from spotdl.providers import metadata_provider, yt_provider, ytm_provider, provider_utils
 from spotdl.search import SongObject, SpotifyClient
-from spotdl.providers import ytm_provider as audio_provider, provider_utils
 
 
 def from_spotify_url(
-    spotify_url: str, output_format: str = None
+    spotify_url: str, output_format: str = None, use_youtube: bool = False
 ) -> Optional[SongObject]:
     """
     Creates song object using spotfy url
@@ -57,10 +56,16 @@ def from_spotify_url(
         return None
 
     # Get the song's downloadable audio link
-    print(f'Searching YouTube for "{display_name}"', end="\r")
-    youtube_link = audio_provider.search_and_get_best_match(
-        song_name, contributing_artists, album_name, duration, isrc
-    )
+    if use_youtube is True:
+        print(f'Searching YouTube for "{display_name}"', end="\r")
+        youtube_link = yt_provider.search_and_get_best_match(
+            song_name, contributing_artists, duration, isrc
+        )
+    else:
+        print(f'Searching YouTube Music for "{display_name}"', end="\r")
+        youtube_link = ytm_provider.search_and_get_best_match(
+            song_name, contributing_artists, album_name, duration, isrc
+        )
 
     # Check if we found youtube url
     if youtube_link is None:
@@ -81,7 +86,7 @@ def from_spotify_url(
     )
 
 
-def from_search_term(query: str, output_format: str = None) -> List[SongObject]:
+def from_search_term(query: str, output_format: str = None, use_youtube: bool = False) -> List[SongObject]:
     """
     Queries Spotify for a song and returns the best match
 
@@ -102,11 +107,11 @@ def from_search_term(query: str, output_format: str = None) -> List[SongObject]:
         raise Exception("No song matches found on Spotify")
     else:
         song_url = "http://open.spotify.com/track/" + result["tracks"]["items"][0]["id"]
-        song = from_spotify_url(song_url, output_format)
+        song = from_spotify_url(song_url, output_format, use_youtube)
         return [song] if song is not None else []
 
 
-def from_album(album_url: str, output_format: str = None) -> List[SongObject]:
+def from_album(album_url: str, output_format: str = None, use_youtube: bool = False) -> List[SongObject]:
     """
     Create and return list containing SongObject for every song in the album
 
@@ -145,7 +150,7 @@ def from_album(album_url: str, output_format: str = None) -> List[SongObject]:
     # Create song objects from track ids
     for track in album_tracks:
         song = from_spotify_url(
-            "https://open.spotify.com/track/" + track["id"], output_format
+            "https://open.spotify.com/track/" + track["id"], output_format, use_youtube
         )
 
         if song is not None and song.youtube_link is not None:
@@ -155,7 +160,7 @@ def from_album(album_url: str, output_format: str = None) -> List[SongObject]:
 
 
 def from_playlist(
-    playlist_url: str, output_format: str = None
+    playlist_url: str, output_format: str = None, use_youtube: bool = False
 ) -> List[SongObject]:
     """
     Create and return list containing SongObject for every song in the playlist
@@ -202,6 +207,7 @@ def from_playlist(
         song = from_spotify_url(
             "https://open.spotify.com/track/" + track["track"]["id"],
             output_format,
+            use_youtube
         )
 
         if song is not None and song.youtube_link is not None:
@@ -210,7 +216,7 @@ def from_playlist(
     return tracks
 
 
-def from_artist(artistUrl: str, output_format: str = None) -> List[SongObject]:
+def from_artist(artistUrl: str, output_format: str = None, use_youtube: bool = False) -> List[SongObject]:
     """
     Create and return list containing SongObject for every song that artists has
 
@@ -312,7 +318,7 @@ def from_artist(artistUrl: str, output_format: str = None) -> List[SongObject]:
     # Create song objects from track ids
     for track_uri in tracks_object.values():
         song = from_spotify_url(
-            f"https://open.spotify.com/track/{track_uri}", output_format
+            f"https://open.spotify.com/track/{track_uri}", output_format, use_youtube
         )
 
         if song is not None and song.youtube_link is not None:
@@ -321,7 +327,7 @@ def from_artist(artistUrl: str, output_format: str = None) -> List[SongObject]:
     return artist_tracks
 
 
-def from_saved_tracks(output_format: str = None) -> List[SongObject]:
+def from_saved_tracks(output_format: str = None, use_youtube: bool = False) -> List[SongObject]:
     """
     Create and return list containing SongObject for every song that user has saved
 
@@ -361,6 +367,7 @@ def from_saved_tracks(output_format: str = None) -> List[SongObject]:
         song = from_spotify_url(
             "https://open.spotify.com/track/" + track["track"]["id"],
             output_format,
+            use_youtube
         )
 
         if song is not None and song.youtube_link is not None:
