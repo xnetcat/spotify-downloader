@@ -21,7 +21,9 @@ class DownloadTracker:
         # Attempt to read .spotdlTrackingFile, raise exception if file can't be read
         tracking_file = Path(tracking_file_path).resolve()
         if not tracking_file.is_file():
-            raise FileNotFoundError(f"no such tracking file found: {tracking_file_path}")
+            raise FileNotFoundError(
+                f"no such tracking file found: {tracking_file_path}"
+            )
 
         with tracking_file.open("rb") as file_handle:
             song_data_dumps = eval(file_handle.read().decode())

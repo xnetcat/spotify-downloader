@@ -4,7 +4,9 @@ from typing import List
 class SongObject:
 
     # Constructor
-    def __init__(self, raw_track_meta, raw_album_meta, raw_artist_meta, youtube_link, lyrics):
+    def __init__(
+        self, raw_track_meta, raw_album_meta, raw_artist_meta, youtube_link, lyrics
+    ):
         self._raw_track_meta = raw_track_meta
         self._raw_album_meta = raw_album_meta
         self._raw_artist_meta = raw_artist_meta

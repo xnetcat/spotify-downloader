@@ -69,6 +69,7 @@ def parse_request(
 
     return song_list
 
+
 def get_youtube_meta_track(youtubeURL: str, spotifyURL: str, outputFormat: str = None):
     # check if URL is a playlist, user, artist or album, if yes raise an Exception,
     # else procede

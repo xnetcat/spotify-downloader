@@ -31,9 +31,7 @@ def _sanitize_filename(input_str: str) -> str:
 
 def _get_smaller_file_path(input_song: SongObject, output_format: str) -> Path:
     # Only use the first artist if the song path turns out to be too long
-    smaller_name = (
-        f"{input_song.contributing_artists[0]} - {input_song.song_name}"
-    )
+    smaller_name = f"{input_song.contributing_artists[0]} - {input_song.song_name}"
 
     # ! this is windows specific (disallowed chars)
     smaller_name = "".join(char for char in smaller_name if char not in "/?\\*|<>")
@@ -225,7 +223,9 @@ class DownloadManager:
             if not temp_folder.exists():
                 temp_folder.mkdir()
 
-            converted_file_path = _get_converted_file_path(song_object, self.arguments["format"])
+            converted_file_path = _get_converted_file_path(
+                song_object, self.arguments["format"]
+            )
 
             # if a song is already downloaded skip it
             if converted_file_path.is_file():

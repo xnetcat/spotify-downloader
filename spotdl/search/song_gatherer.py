@@ -205,7 +205,8 @@ def from_playlist(
     playlist_tracks = [
         track
         for track in playlist_tracks
-        if track is not None and track.get("track") is not None
+        if track is not None
+        and track.get("track") is not None
         and track.get("track", {}).get("id") is not None
     ]
 
@@ -236,7 +237,9 @@ def from_artist(
 
     artist_tracks = []
 
-    artist_response = spotify_client.artist_albums(artist_url, album_type="album,single")
+    artist_response = spotify_client.artist_albums(
+        artist_url, album_type="album,single"
+    )
     if artist_response is None:
         raise ValueError("Wrong artist id")
 
@@ -317,7 +320,9 @@ def from_artist(
     # Create song objects from track ids
     for trackUri in tracks_object.values():
         song = from_spotify_url(
-            f"https://open.spotify.com/track/{trackUri.split(':')[-1]}", output_format, use_youtube
+            f"https://open.spotify.com/track/{trackUri.split(':')[-1]}",
+            output_format,
+            use_youtube,
         )
 
         if song is not None and song.youtube_link is not None:
@@ -360,7 +365,8 @@ def from_saved_tracks(
     saved_tracks = [
         track
         for track in saved_tracks
-        if track is not None and track.get("track") is not None
+        if track is not None
+        and track.get("track") is not None
         and track.get("track", {}).get("id") is not None
     ]
 
