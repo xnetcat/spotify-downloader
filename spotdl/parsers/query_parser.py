@@ -1,14 +1,6 @@
 from typing import List
 
-from spotdl.search import SongObject
-from spotdl.search.song_gatherer import (
-    songobject_from_spotify_url,
-    get_album_tracks,
-    get_playlist_tracks,
-    get_artist_tracks,
-    get_saved_tracks,
-    from_search_term,
-)
+from spotdl.search import SongObject, song_gatherer
 
 
 def parse_query(query: List[str], format) -> List[SongObject]:
@@ -32,24 +24,24 @@ def parse_request(request: str, output_format: str = None) -> List[SongObject]:
     song_list: List[SongObject] = []
     if "open.spotify.com" in request and "track" in request:
         print("Fetching Song...")
-        song = songobject_from_spotify_url(request, output_format)
+        song = song_gatherer.from_spotify_url(request, output_format)
         song_list = [song] if song is not None else []
     elif "open.spotify.com" in request and "album" in request:
         print("Fetching Album...")
-        song_list = get_album_tracks(request, output_format)
+        song_list = song_gatherer.from_album(request, output_format)
     elif "open.spotify.com" in request and "playlist" in request:
         print("Fetching Playlist...")
-        song_list = get_playlist_tracks(request, output_format)
+        song_list = song_gatherer.from_playlist(request, output_format)
     elif "open.spotify.com" in request and "artist" in request:
         print("Fetching artist...")
-        song_list = get_artist_tracks(request, output_format)
+        song_list = song_gatherer.from_artist(request, output_format)
     elif request == "saved":
         print("Fetching Saved Songs...")
-        song_list = get_saved_tracks(output_format)
+        song_list = song_gatherer.from_saved_tracks(output_format)
     else:
         print('Searching Spotify for song named "%s"...' % request)
         try:
-            song_list = from_search_term(request, output_format)
+            song_list = song_gatherer.from_search_term(request, output_format)
         except Exception as e:
             print(e)
 
