@@ -81,7 +81,7 @@ def console_entry_point():
 
         # Get songs
         song_list = parse_query(
-            arguments.query, arguments.format, arguments.use_youtube
+            arguments.query, arguments.output_format, arguments.use_youtube
         )
 
         # Start downloading
