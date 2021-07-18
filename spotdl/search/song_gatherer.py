@@ -76,10 +76,7 @@ def from_spotify_url(
         print(f'Found YouTube URL for "{display_name}" : {youtube_link}')
 
     # (try to) Get lyrics from Genius
-    try:
-        lyrics = provider_utils._get_song_lyrics(song_name, contributing_artists)
-    except:  # noqa: E722
-        lyrics = ""
+    lyrics = provider_utils._get_song_lyrics(song_name, contributing_artists)
 
     return SongObject(
         raw_track_meta, raw_album_meta, raw_artist_meta, youtube_link, lyrics
