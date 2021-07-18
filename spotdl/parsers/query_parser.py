@@ -38,7 +38,11 @@ def parse_request(
             print("Incorrect format used, please use YouTubeURL|SpotifyURL")
         else:
             print("Fetching YouTube video with spotify metadata")
-            songObjList = [get_youtube_meta_track(urls[0], urls[1], output_format)]
+            song_list = [
+                song
+                for song in [get_youtube_meta_track(urls[0], urls[1], output_format)]
+                if song is not None
+            ]
     elif "open.spotify.com" in request and "track" in request:
         print("Fetching Song...")
         song = song_gatherer.from_spotify_url(request, output_format, use_youtube)

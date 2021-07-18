@@ -1,6 +1,6 @@
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
-help_notice = r"""
+help_notice = r"""  # noqa: E501
 To download a song run,
     spotdl [trackUrl]
     ex. spotdl https://open.spotify.com/track/0VjIjW4GlUZAMYd2vXMi3b
