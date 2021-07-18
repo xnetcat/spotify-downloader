@@ -60,7 +60,7 @@ def _parse_duration(duration: str) -> float:
 
 def _create_song_title(songName: str, songArtists: List[str]) -> str:
     joined_artists = ", ".join(songArtists)
-    return f"{joined_artists} - {songName}"
+    return f"{joined_artists} - {songName}".lower()
 
 
 def _get_song_lyrics(song_name: str, song_artists: List[str]) -> str:

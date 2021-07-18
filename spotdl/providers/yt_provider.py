@@ -104,7 +104,7 @@ def _order_ytm_results(
                 common_word = True
 
         # ! if there are no common words, skip result
-        if not common_word:
+        if common_word is False:
             continue
 
         # Find artist match
@@ -130,7 +130,7 @@ def _order_ytm_results(
         artist_match = (artist_match_number / len(song_artists)) * 100
         song_title = _create_song_title(song_name, song_artists)
         name_match = round(
-            _match_percentage(unidecode(result.title), unidecode(song_title), 60),
+            _match_percentage(unidecode(result.title.lower()), unidecode(song_title), 60),
             ndigits=3,
         )
 
