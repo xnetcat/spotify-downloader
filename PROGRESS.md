@@ -1,7 +1,13 @@
 console - done
     - `__init__.py` - done
 
-download - not done
+download - done
+    - `__init__.py` - done
+    - `downloader.py` - done
+    - `embed_metadata.py` - done
+    - `ffmpeg.py` - done
+    - `progess_ui_handler.py` - done
+    - `tracking_file_handler.py` - done
 
 parsers - done
     - `__init__.py` - done
