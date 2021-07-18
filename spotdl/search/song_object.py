@@ -4,17 +4,17 @@ from typing import List
 class SongObject:
 
     # Constructor
-    def __init__(self, rawTrackMeta, rawAlbumMeta, rawArtistMeta, youtubeLink, lyrics):
-        self.__rawTrackMeta = rawTrackMeta
-        self.__rawAlbumMeta = rawAlbumMeta
-        self.__rawArtistMeta = rawArtistMeta
-        self.__youtubeLink = youtubeLink
-        self.__lyrics = lyrics
+    def __init__(self, raw_track_meta, raw_album_meta, raw_artist_meta, youtube_link, lyrics):
+        self._raw_track_meta = raw_track_meta
+        self._raw_album_meta = raw_album_meta
+        self._raw_artist_meta = raw_artist_meta
+        self._youtube_link = youtube_link
+        self._lyrics = lyrics
 
     # Equals method
     # for example song_obj1 == song_obj2
-    def __eq__(self, comparedSong) -> bool:
-        if comparedSong.data_dump == self.data_dump:
+    def __eq__(self, compared_song) -> bool:
+        if compared_song.data_dump == self.data_dump:
             return True
         else:
             return False
@@ -28,7 +28,7 @@ class SongObject:
         """
         returns youtube link
         """
-        return self.__youtubeLink
+        return self._youtube_link
 
     @property
     def song_name(self) -> str:
@@ -36,7 +36,7 @@ class SongObject:
         returns songs's name.
         """
 
-        return self.__rawTrackMeta["name"]
+        return self._raw_track_meta["name"]
 
     @property
     def track_number(self) -> int:
@@ -45,7 +45,7 @@ class SongObject:
         or second or third or fifth track in the album)
         """
 
-        return self.__rawTrackMeta["track_number"]
+        return self._raw_track_meta["track_number"]
 
     @property
     def genres(self) -> List[str]:
@@ -55,7 +55,7 @@ class SongObject:
         not be found.
         """
 
-        return self.__rawAlbumMeta["genres"] + self.__rawArtistMeta["genres"]
+        return self._raw_album_meta["genres"] + self._raw_artist_meta["genres"]
 
     @property
     def duration(self) -> float:
@@ -63,7 +63,7 @@ class SongObject:
         returns duration of song in seconds.
         """
 
-        return round(self.__rawTrackMeta["duration_ms"] / 1000, ndigits=3)
+        return round(self._raw_track_meta["duration_ms"] / 1000, ndigits=3)
 
     @property
     def contributing_artists(self) -> List[str]:
@@ -80,14 +80,14 @@ class SongObject:
 
         contributingArtists = []
 
-        for artist in self.__rawTrackMeta["artists"]:
+        for artist in self._raw_track_meta["artists"]:
             contributingArtists.append(artist["name"])
 
         return contributingArtists
 
     @property
     def disc_number(self) -> int:
-        return self.__rawTrackMeta["disc_number"]
+        return self._raw_track_meta["disc_number"]
 
     @property
     def lyrics(self):
@@ -95,7 +95,7 @@ class SongObject:
         returns the lyrics of the song if found on Genius
         """
 
-        return self.__lyrics
+        return self._lyrics
 
     @property
     def display_name(self) -> str:
@@ -111,7 +111,7 @@ class SongObject:
         returns name of the album that the song belongs to.
         """
 
-        return self.__rawTrackMeta["album"]["name"]
+        return self._raw_track_meta["album"]["name"]
 
     @property
     def album_artists(self) -> List[str]:
@@ -123,7 +123,7 @@ class SongObject:
 
         albumArtists = []
 
-        for artist in self.__rawTrackMeta["album"]["artists"]:
+        for artist in self._raw_track_meta["album"]["artists"]:
             albumArtists.append(artist["name"])
 
         return albumArtists
@@ -134,7 +134,7 @@ class SongObject:
         returns date/year of album release depending on what data is available.
         """
 
-        return self.__rawTrackMeta["album"]["release_date"]
+        return self._raw_track_meta["album"]["release_date"]
 
     # ! Utilities for genuine use and also for metadata freaks:
 
@@ -144,7 +144,7 @@ class SongObject:
         returns url of the biggest album art image available.
         """
 
-        return self.__rawTrackMeta["album"]["images"][0]["url"]
+        return self._raw_track_meta["album"]["images"][0]["url"]
 
     @property
     def data_dump(self) -> dict:
@@ -163,18 +163,18 @@ class SongObject:
         # ! internally the only reason this exists is that it helps in saving to disk
 
         return {
-            "youtube_link": self.__youtubeLink,
-            "raw_track_meta": self.__rawTrackMeta,
-            "raw_album_meta": self.__rawAlbumMeta,
-            "raw_artist_meta": self.__rawArtistMeta,
-            "lyrics": self.__lyrics,
+            "youtube_link": self._youtube_link,
+            "raw_track_meta": self._raw_track_meta,
+            "raw_album_meta": self._raw_album_meta,
+            "raw_artist_meta": self._raw_artist_meta,
+            "lyrics": self._lyrics,
         }
 
     @property
     def file_name(self) -> str:
         return self.create_file_name(
-            song_name=self.__rawTrackMeta["name"],
-            song_artists=[artist["name"] for artist in self.__rawTrackMeta["artists"]],
+            song_name=self._raw_track_meta["name"],
+            song_artists=[artist["name"] for artist in self._raw_track_meta["artists"]],
         )
 
     @staticmethod
