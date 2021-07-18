@@ -6,7 +6,7 @@ from spotdl.search import SongObject, SpotifyClient
 from spotdl.providers import ytm_provider as audio_provider
 
 
-def songobject_from_spotify_url(
+def from_spotify_url(
     spotify_url: str, output_format: str = None
 ) -> Optional[SongObject]:
     """
@@ -27,6 +27,9 @@ def songobject_from_spotify_url(
     raw_track_meta, raw_artist_meta, raw_album_meta = metadata_provider.from_url(
         spotify_url
     )
+
+    if raw_track_meta is None:
+        return None
 
     song_name = raw_track_meta["name"]
     album_name = raw_track_meta["album"]["name"]
@@ -95,7 +98,7 @@ def from_search_term(query: str, output_format: str = None) -> List[SongObject]:
     result = spotify_client.search(query, type="track")
 
     # return first result link or if no matches are found, raise Exception
-    if len(result["tracks"]["items"]) == 0:
+    if result is None or len(result.get("tracks", {}).get("items", [])) == 0:
         raise Exception("No song matches found on Spotify")
     else:
         song_url = "http://open.spotify.com/track/" + result["tracks"]["items"][0]["id"]
@@ -103,7 +106,7 @@ def from_search_term(query: str, output_format: str = None) -> List[SongObject]:
         return [song] if song is not None else []
 
 
-def get_album_tracks(album_url: str, output_format: str = None) -> List[SongObject]:
+def from_album(album_url: str, output_format: str = None) -> List[SongObject]:
     """
     Create and return list containing SongObject for every song in the album
 
@@ -114,14 +117,22 @@ def get_album_tracks(album_url: str, output_format: str = None) -> List[SongObje
     """
 
     spotify_client = SpotifyClient()
+    tracks = []
 
     album_response = spotify_client.album_tracks(album_url)
+    if album_response is None:
+        raise ValueError("Wrong album id")
+
     album_tracks = album_response["items"]
-    tracks = []
 
     # Get all tracks from album
     while album_response["next"]:
         album_response = spotify_client.next(album_response)
+
+        # Failed to get response, break the loop
+        if album_response is None:
+            break
+
         album_tracks.extend(
             [
                 track
@@ -143,7 +154,7 @@ def get_album_tracks(album_url: str, output_format: str = None) -> List[SongObje
     return tracks
 
 
-def get_playlist_tracks(
+def from_playlist(
     playlist_url: str, output_format: str = None
 ) -> List[SongObject]:
     """
@@ -156,18 +167,27 @@ def get_playlist_tracks(
     """
 
     spotify_client = SpotifyClient()
+    tracks = []
+
     playlist_response = spotify_client.playlist_tracks(playlist_url)
+    if playlist_response is None:
+        raise ValueError("Wrong playlist id")
+
     playlist_tracks = [
         track
         for track in playlist_response["items"]
         # check if track has id
         if track.get("track", {}).get("id") is not None
     ]
-    tracks = []
 
     # Get all tracks from playlist
     while playlist_response["next"]:
         playlist_response = spotify_client.next(playlist_response)
+
+        # Failed to get response, break the loop
+        if playlist_response is None:
+            break
+
         playlist_tracks.extend(
             [
                 track
@@ -190,7 +210,7 @@ def get_playlist_tracks(
     return tracks
 
 
-def get_artist_tracks(artistUrl: str, output_format: str = None) -> List[SongObject]:
+def from_artist(artistUrl: str, output_format: str = None) -> List[SongObject]:
     """
     Create and return list containing SongObject for every song that artists has
 
@@ -203,6 +223,9 @@ def get_artist_tracks(artistUrl: str, output_format: str = None) -> List[SongObj
     spotify_client = SpotifyClient()
 
     artist_response = spotify_client.artist_albums(artistUrl, album_type="album,single")
+    if artist_response is None:
+        raise ValueError("Wrong artist id")
+
     albums_list = artist_response["items"]
     albums_object: Dict[str, str] = {}
     tracks_object: Dict[str, str] = {}
@@ -211,7 +234,13 @@ def get_artist_tracks(artistUrl: str, output_format: str = None) -> List[SongObj
 
     # Fetch all artist albums
     while artist_response["next"]:
-        artist_response = spotify_client.next(artist_response)
+        response = spotify_client.next(artist_response)
+
+        # wrong response, break the loop
+        if response is None:
+            break
+
+        artist_response = response
         albums_list.extend(artist_response["items"])
 
     # Remove duplicate albums
@@ -227,7 +256,13 @@ def get_artist_tracks(artistUrl: str, output_format: str = None) -> List[SongObj
 
     # Fetch all tracks from all albums
     for album_uri in albums_object.values():
-        album_response = spotify_client.album_tracks(album_uri)
+        response = spotify_client.album_tracks(album_uri)
+
+        # Wrong response, get next album
+        if response is None:
+            continue
+
+        album_response = response
         album_tracks = [
             track
             for track in album_response["items"]
@@ -286,7 +321,7 @@ def get_artist_tracks(artistUrl: str, output_format: str = None) -> List[SongObj
     return artist_tracks
 
 
-def get_saved_tracks(output_format: str = None) -> List[SongObject]:
+def from_saved_tracks(output_format: str = None) -> List[SongObject]:
     """
     Create and return list containing SongObject for every song that user has saved
 
@@ -298,12 +333,20 @@ def get_saved_tracks(output_format: str = None) -> List[SongObject]:
     spotify_client = SpotifyClient()
 
     saved_tracks_response = spotify_client.current_user_saved_tracks()
+    if saved_tracks_response is None:
+        raise Exception("Couldn't get saved tracks")
+
     saved_tracks = saved_tracks_response["items"]
     tracks = []
 
     # Fetch all saved tracks
     while saved_tracks_response["next"]:
-        saved_tracks_response = spotify_client.next(saved_tracks_response)
+        response = spotify_client.next(saved_tracks_response)
+        # response is wrong, break
+        if response is None:
+            break
+
+        saved_tracks_response = response
         saved_tracks.extend(
             [
                 track
