@@ -80,7 +80,9 @@ def console_entry_point():
             downloader.resume_download_from_tracking_file(tracking_file)
 
         # Get songs
-        song_list = parse_query(arguments.query, arguments.format, arguments.use_youtube)
+        song_list = parse_query(
+            arguments.query, arguments.format, arguments.use_youtube
+        )
 
         # Start downloading
         if len(song_list) > 0:

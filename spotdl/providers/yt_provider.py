@@ -57,9 +57,7 @@ def search_and_get_best_match(
         return None
 
     # Order results
-    results = _order_ytm_results(
-        results, song_name, song_artists, song_duration
-    )
+    results = _order_ytm_results(results, song_name, song_artists, song_duration)
 
     # No matches found
     if len(results) == 0:
@@ -118,7 +116,7 @@ def _order_ytm_results(
             # ! (remix)' would return 100, so we're absolutely corrent in matching
             # ! artists to song name.
             if _match_percentage(
-                    unidecode(artist.lower()), unidecode(result.title).lower(), 85
+                unidecode(artist.lower()), unidecode(result.title).lower(), 85
             ):
                 artist_match_number += 1
 
@@ -130,7 +128,9 @@ def _order_ytm_results(
         artist_match = (artist_match_number / len(song_artists)) * 100
         song_title = _create_song_title(song_name, song_artists)
         name_match = round(
-            _match_percentage(unidecode(result.title.lower()), unidecode(song_title), 60),
+            _match_percentage(
+                unidecode(result.title.lower()), unidecode(song_title), 60
+            ),
             ndigits=3,
         )
 
@@ -145,7 +145,7 @@ def _order_ytm_results(
         # ! difference in song duration (delta) is usually of the magnitude of a few
         # ! seconds, we need to amplify the delta if it is to have any meaningful impact
         # ! wen we calculate the avg match value
-        delta = result.length - song_duration # ! check this
+        delta = result.length - song_duration  # ! check this
         non_match_value = (delta ** 2) / song_duration * 100
 
         time_match = 100 - non_match_value
@@ -156,4 +156,3 @@ def _order_ytm_results(
         links_with_match_value[result.watch_url] = average_match
 
     return links_with_match_value
-

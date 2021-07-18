@@ -20,7 +20,9 @@ def parse_query(query: List[str], format, use_youtube) -> List[SongObject]:
     return songs_list
 
 
-def parse_request(request: str, output_format: str = None, use_youtube: bool = False) -> List[SongObject]:
+def parse_request(
+    request: str, output_format: str = None, use_youtube: bool = False
+) -> List[SongObject]:
     song_list: List[SongObject] = []
     if "open.spotify.com" in request and "track" in request:
         print("Fetching Song...")
@@ -41,7 +43,9 @@ def parse_request(request: str, output_format: str = None, use_youtube: bool = F
     else:
         print('Searching Spotify for song named "%s"...' % request)
         try:
-            song_list = song_gatherer.from_search_term(request, output_format, use_youtube)
+            song_list = song_gatherer.from_search_term(
+                request, output_format, use_youtube
+            )
         except Exception as e:
             print(e)
 

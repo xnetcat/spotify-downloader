@@ -7,5 +7,5 @@ from spotdl.search.song_gatherer import (
     from_playlist,
     from_artist,
     from_saved_tracks,
-    from_dump
+    from_dump,
 )  # noqa: F401
