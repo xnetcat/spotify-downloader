@@ -80,19 +80,19 @@ def _get_song_lyrics(song_name: str, song_artists: List[str]) -> str:
     api_search_url = "https://api.genius.com/search"
     search_query = f'{song_name} {", ".join(song_artists)}'
 
-    api_response = requests.get(
-        api_search_url, params={"q": search_query}, headers=headers
-    ).json()
-
-    song_id = api_response["response"]["hits"][0]["result"]["id"]
-    song_api_url = f"https://api.genius.com/songs/{song_id}"
-
-    api_response = requests.get(song_api_url, headers=headers).json()
-
-    song_url = api_response["response"]["song"]["url"]
-
-    genius_page = requests.get(song_url)
     try:
+        api_response = requests.get(
+            api_search_url, params={"q": search_query}, headers=headers
+        ).json()
+
+        song_id = api_response["response"]["hits"][0]["result"]["id"]
+        song_api_url = f"https://api.genius.com/songs/{song_id}"
+
+        api_response = requests.get(song_api_url, headers=headers).json()
+
+        song_url = api_response["response"]["song"]["url"]
+
+        genius_page = requests.get(song_url)
         soup = BeautifulSoup(genius_page.text, "html.parser")
         lyrics_div = soup.select_one("div.lyrics")
 
