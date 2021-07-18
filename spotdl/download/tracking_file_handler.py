@@ -10,9 +10,9 @@ class DownloadTracker:
         self.song_list = []
         self.save_file: Optional[Path] = None
 
-    def load_tracking_file(self, trackingFilePath: str) -> None:
+    def load_tracking_file(self, tracking_file_path: str) -> None:
         """
-        `str` `trackingFilePath` : path to a .spotdlTrackingFile
+        `str` `tracking_file_path` : path to a .spotdlTrackingFile
 
         RETURNS `~`
 
@@ -20,19 +20,19 @@ class DownloadTracker:
         """
 
         # Attempt to read .spotdlTrackingFile, raise exception if file can't be read
-        trackingFile = Path(trackingFilePath).resolve()
-        if not trackingFile.is_file():
-            raise FileNotFoundError(f"no such tracking file found: {trackingFilePath}")
+        tracking_file = Path(tracking_file_path).resolve()
+        if not tracking_file.is_file():
+            raise FileNotFoundError(f"no such tracking file found: {tracking_file_path}")
 
-        with trackingFile.open("rb") as file_handle:
-            songDataDumps = eval(file_handle.read().decode())
+        with tracking_file.open("rb") as file_handle:
+            song_data_dumps = eval(file_handle.read().decode())
 
         # Save path to .spotdlTrackingFile
-        self.save_file = trackingFile
+        self.save_file = tracking_file
 
         # convert song data dumps to songObj's
         # ! see, songGatherer.get_data_dump and songGatherer.from_dump for more details
-        for dump in songDataDumps:
+        for dump in song_data_dumps:
             self.song_list.append(song_gatherer.from_dump(dump))
 
     def load_song_list(self, song_list: List[SongObject]) -> None:
@@ -67,30 +67,29 @@ class DownloadTracker:
         if len(self.song_list) == 0:
             if self.save_file and self.save_file.is_file():
                 self.save_file.unlink()
+
             return None
 
         # prepare datadumps of all songObj's yet to be downloaded
-        songDataDumps = []
+        song_data_dumps = []
 
         for song in self.song_list:
-            songDataDumps.append(song.data_dump)
+            song_data_dumps.append(song.data_dump)
 
         # ! the default naming of a tracking file is $nameOfFirstSOng.spotdlTrackingFile,
         # ! it needs a little fixing because of disallowed characters in file naming
         if not self.save_file:
-            songName = self.song_list[0].song_name
+            song_name = self.song_list[0].song_name
 
-            for disallowedChar in ["/", "?", "\\", "*", "|", "<", ">"]:
-                if disallowedChar in songName:
-                    songName = songName.replace(disallowedChar, "")
+            song_name = "".join(char for char in song_name if char not in "/?\\*|<>")
 
-            songName = songName.replace('"', "'").replace(":", " - ")
+            song_name = song_name.replace('"', "'").replace(":", " - ")
 
-            self.save_file = Path(songName + ".spotdlTrackingFile")
+            self.save_file = Path(song_name + ".spotdlTrackingFile")
 
         # save encoded string to a file
         with open(self.save_file, "wb") as file_handle:
-            file_handle.write(str(songDataDumps).encode())
+            file_handle.write(str(song_data_dumps).encode())
 
     def notify_download_completion(self, song_object: SongObject) -> None:
         """
