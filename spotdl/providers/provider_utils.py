@@ -100,5 +100,5 @@ def _get_song_lyrics(song_name: str, song_artists: List[str]) -> str:
             return lyrics_div.get_text().strip()
 
         return ""
-    except:
+    except:  # noqa: E722
         return ""
