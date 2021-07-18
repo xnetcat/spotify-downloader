@@ -42,7 +42,7 @@ def search_and_get_best_match(
         if isrc_results and len(isrc_results) == 1:
             isrc_result = isrc_results[0]
 
-            if isrc_result is not None:
+            if isrc_result is not None and "link" in isrc_result:
                 return isrc_result.watch_url
 
     song_title = _create_song_title(song_name, song_artists)
