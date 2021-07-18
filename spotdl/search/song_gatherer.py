@@ -102,7 +102,7 @@ def from_search_term(query: str, output_format: str = None) -> List[SongObject]:
         raise Exception("No song matches found on Spotify")
     else:
         song_url = "http://open.spotify.com/track/" + result["tracks"]["items"][0]["id"]
-        song = songobject_from_spotify_url(song_url, output_format)
+        song = from_spotify_url(song_url, output_format)
         return [song] if song is not None else []
 
 
@@ -144,7 +144,7 @@ def from_album(album_url: str, output_format: str = None) -> List[SongObject]:
 
     # Create song objects from track ids
     for track in album_tracks:
-        song = songobject_from_spotify_url(
+        song = from_spotify_url(
             "https://open.spotify.com/track/" + track["id"], output_format
         )
 
@@ -199,7 +199,7 @@ def from_playlist(
 
     # Create song object for each track
     for track in playlist_tracks:
-        song = songobject_from_spotify_url(
+        song = from_spotify_url(
             "https://open.spotify.com/track/" + track["track"]["id"],
             output_format,
         )
@@ -311,7 +311,7 @@ def from_artist(artistUrl: str, output_format: str = None) -> List[SongObject]:
 
     # Create song objects from track ids
     for track_uri in tracks_object.values():
-        song = songobject_from_spotify_url(
+        song = from_spotify_url(
             f"https://open.spotify.com/track/{track_uri}", output_format
         )
 
@@ -358,7 +358,7 @@ def from_saved_tracks(output_format: str = None) -> List[SongObject]:
 
     # Create song object for each track
     for track in saved_tracks:
-        song = songobject_from_spotify_url(
+        song = from_spotify_url(
             "https://open.spotify.com/track/" + track["track"]["id"],
             output_format,
         )
