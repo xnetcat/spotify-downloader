@@ -8,7 +8,7 @@ from mutagen.oggvorbis import OggVorbis
 from mutagen.easyid3 import EasyID3, ID3
 from mutagen.id3 import APIC as AlbumCover, USLT, COMM as Comment
 
-from spotdl.search.song_object import SongObject
+from spotdl.search import SongObject
 
 
 # Apple has specific tags - see mutagen docs -

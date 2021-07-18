@@ -1,8 +1,7 @@
 from pathlib import Path
 from typing import Optional, List
 
-from spotdl.search import SongObject
-from spotdl.search import song_gatherer
+from spotdl.search import SongObject, song_gatherer
 
 
 class DownloadTracker:

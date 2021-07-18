@@ -7,11 +7,8 @@ from pathlib import Path
 from pytube import YouTube
 from typing import List, Optional
 
-from spotdl.download import ffmpeg
 from spotdl.search import SongObject
-from spotdl.download.embed_metadata import set_id3_data
-from spotdl.download.progress_ui_handler import DisplayManager
-from spotdl.download.tracking_file_handler import DownloadTracker
+from spotdl.download import ffmpeg, set_id3_data, DisplayManager, DownloadTracker
 
 
 class DownloadManager:
