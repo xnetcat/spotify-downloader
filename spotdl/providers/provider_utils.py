@@ -92,7 +92,13 @@ def _get_song_lyrics(song_name: str, song_artists: List[str]) -> str:
     song_url = api_response["response"]["song"]["url"]
 
     genius_page = requests.get(song_url)
-    soup = BeautifulSoup(genius_page.text, "html.parser")
-    lyrics = soup.select_one("div.lyrics").get_text()
+    try:
+        soup = BeautifulSoup(genius_page.text, "html.parser")
+        lyrics_div = soup.select_one("div.lyrics")
 
-    return lyrics.strip()
+        if lyrics_div is not None:
+            return lyrics_div.get_text().strip()
+
+        return ""
+    except:
+        return ""
