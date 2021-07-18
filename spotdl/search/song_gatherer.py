@@ -144,14 +144,14 @@ def from_album(
         if album_response is None:
             break
 
-        album_tracks.extend(
-            [
-                track
-                for track in album_response["items"]
-                # check if track has id
-                if track.get("track", {}).get("id") is not None
-            ]
-        )
+        album_tracks.extend(album_response["items"])
+
+    # Remove songs  without id
+    album_tracks = [
+        track
+        for track in album_tracks
+        if track is not None and track.get("id") is not None
+    ]
 
     # Create song objects from track ids
     for track in album_tracks:
@@ -199,14 +199,15 @@ def from_playlist(
         if playlist_response is None:
             break
 
-        playlist_tracks.extend(
-            [
-                track
-                for track in playlist_response["items"]
-                # check if track has id
-                if track.get("track", {}).get("id") is not None
-            ]
-        )
+        playlist_tracks.extend(playlist_response["items"])
+
+    # Remove songs  without id
+    playlist_tracks = [
+        track
+        for track in playlist_tracks
+        if track is not None and track.get("track") is not None
+        and track.get("track", {}).get("id") is not None
+    ]
 
     # Create song object for each track
     for track in playlist_tracks:
@@ -223,34 +224,28 @@ def from_playlist(
 
 
 def from_artist(
-    artistUrl: str, output_format: str = None, use_youtube: bool = False
+    artist_url: str, output_format: str = None, use_youtube: bool = False
 ) -> List[SongObject]:
     """
-    Create and return list containing SongObject for every song that artists has
-
-    `str` `album_url` : Spotify Url of the artist whose tracks are to be retrieved
-    `str` `output_format` : output format of the song
-
-    returns a `list<SongObject>` containing Url's of each track in the artist profile
+    `str` `artist_url` : Spotify Url of the artist whose tracks are to be
+    retrieved
+    returns a `list<songObj>` containing Url's of each track in the artist profile
     """
 
     spotify_client = SpotifyClient()
 
-    artist_response = spotify_client.artist_albums(artistUrl, album_type="album,single")
+    artist_tracks = []
+
+    artist_response = spotify_client.artist_albums(artist_url, album_type="album,single")
     if artist_response is None:
         raise ValueError("Wrong artist id")
 
     albums_list = artist_response["items"]
     albums_object: Dict[str, str] = {}
-    tracks_object: Dict[str, str] = {}
-    artist_tracks = []
-    tracks_list = []
 
     # Fetch all artist albums
     while artist_response["next"]:
         response = spotify_client.next(artist_response)
-
-        # wrong response, break the loop
         if response is None:
             break
 
@@ -268,44 +263,40 @@ def from_artist(
         if albums_object.get(album_name) is None:
             albums_object[album_name] = album["uri"]
 
+    tracks_list = []
+    tracks_object: Dict[str, str] = {}
+
     # Fetch all tracks from all albums
     for album_uri in albums_object.values():
         response = spotify_client.album_tracks(album_uri)
-
-        # Wrong response, get next album
         if response is None:
             continue
 
         album_response = response
-        album_tracks = [
-            track
-            for track in album_response["items"]
-            # check if track has id
-            if track.get("track", {}).get("id") is not None
-        ]
+        album_tracks = album_response["items"]
 
         while album_response["next"]:
-            spotify_client.next(album_response)
-            album_tracks.extend(
-                [
-                    track
-                    for track in album_response["items"]
-                    # check if track has id
-                    if track.get("track", {}).get("id") is not None
-                ]
-            )
+            album_response = spotify_client.next(album_response)
+            if album_response is None:
+                break
+
+            album_tracks.extend(album_response["items"])
 
         tracks_list.extend(album_tracks)
 
     # Filter tracks to remove duplicates and songs without our artist
     for track in tracks_list:
+        # ignore tracks without uri
+        if track.get("uri") is None:
+            continue
+
         # return an iterable containing the string's alphanumeric characters
-        alpha_numeric_filter = filter(str.isalnum, track["name"].lower())
+        alphaNumericFilter = filter(str.isalnum, track["name"].lower())
 
         # join all characters into one string
-        track_name = "".join(alpha_numeric_filter)
+        trackName = "".join(alphaNumericFilter)
 
-        if tracks_object.get(track_name) is None:
+        if tracks_object.get(trackName) is None:
             for artist in track["artists"]:
                 # get artist id from url
                 # https://api.spotify.com/v1/artists/1fZAAHNWdSM5gqbi9o5iEA/albums
@@ -316,17 +307,17 @@ def from_artist(
                 #
                 # get second element from the end
                 # '1fZAAHNWdSM5gqbi9o5iEA'
-                artist_id = artist_response["href"].split("/")[-2]
+                artistId = artist_response["href"].split("/")[-2]
 
                 # ignore tracks that are not from our artist by checking
                 # the id
-                if artist["id"] == artist_id:
-                    tracks_object[track_name] = track["uri"]
+                if artist["id"] == artistId:
+                    tracks_object[trackName] = track["uri"]
 
     # Create song objects from track ids
-    for track_uri in tracks_object.values():
+    for trackUri in tracks_object.values():
         song = from_spotify_url(
-            f"https://open.spotify.com/track/{track_uri}", output_format, use_youtube
+            f"https://open.spotify.com/track/{trackUri.split(':')[-1]}", output_format, use_youtube
         )
 
         if song is not None and song.youtube_link is not None:
@@ -363,14 +354,15 @@ def from_saved_tracks(
             break
 
         saved_tracks_response = response
-        saved_tracks.extend(
-            [
-                track
-                for track in saved_tracks_response["items"]
-                # check if track has id
-                if track.get("track", {}).get("id") is not None
-            ]
-        )
+        saved_tracks.extend(saved_tracks_response["items"])
+
+    # Remove songs  without id
+    saved_tracks = [
+        track
+        for track in saved_tracks
+        if track is not None and track.get("track") is not None
+        and track.get("track", {}).get("id") is not None
+    ]
 
     # Create song object for each track
     for track in saved_tracks:
