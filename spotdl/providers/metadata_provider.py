@@ -1,8 +1,3 @@
-import requests
-
-from typing import List
-from bs4 import BeautifulSoup
-
 from spotdl.search import SpotifyClient
 
 
@@ -14,6 +9,9 @@ def from_url(spotify_url: str):
     spotify_client = SpotifyClient()
 
     raw_track_meta = spotify_client.track(spotify_url)
+
+    if raw_track_meta is None:
+        raise Exception("Couldn't get metadata, check if you have passed correct track id")
 
     primary_artist_id = raw_track_meta["artists"][0]["id"]
     raw_artist_meta = spotify_client.artist(primary_artist_id)
