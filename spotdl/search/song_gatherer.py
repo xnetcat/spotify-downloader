@@ -397,7 +397,7 @@ def from_dump(data_dump: dict) -> SongObject:
 
     raw_track_meta = data_dump["raw_track_meta"]
     raw_album_meta = data_dump["raw_album_meta"]
-    raw_artist_meta = data_dump["raw_album_meta"]
+    raw_artist_meta = data_dump["raw_artist_meta"]
     youtube_link = data_dump["youtube_link"]
     lyrics = data_dump["lyrics"]
 
