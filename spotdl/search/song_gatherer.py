@@ -3,7 +3,7 @@ from typing import Dict, List, Optional
 
 from spotdl.providers import metadata_provider
 from spotdl.search import SongObject, SpotifyClient
-from spotdl.providers import ytm_provider as audio_provider
+from spotdl.providers import ytm_provider as audio_provider, provider_utils
 
 
 def from_spotify_url(
@@ -72,7 +72,7 @@ def from_spotify_url(
 
     # (try to) Get lyrics from Genius
     try:
-        lyrics = metadata_provider.get_song_lyrics(song_name, contributing_artists)
+        lyrics = provider_utils._get_song_lyrics(song_name, contributing_artists)
     except:  # noqa: E722
         lyrics = ""
 
