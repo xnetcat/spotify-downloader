@@ -922,7 +922,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#migrate-on-boot-numreplicas-1-read-before-scaling" class="md-nav__link">
+  <a href="#migrate-on-boot-and-scaling" class="md-nav__link">
     <span class="md-ellipsis">
       
         Migrate-on-boot ⟷ numReplicas = 1 (READ BEFORE SCALING)
@@ -1167,7 +1167,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#migrate-on-boot-numreplicas-1-read-before-scaling" class="md-nav__link">
+  <a href="#migrate-on-boot-and-scaling" class="md-nav__link">
     <span class="md-ellipsis">
       
         Migrate-on-boot ⟷ numReplicas = 1 (READ BEFORE SCALING)
@@ -1279,7 +1279,7 @@ the config-as-code contract plus the operator runbook.</p>
 from GHCR — byte-identical build, same tag (spec §9). Nothing about hosting is a
 private fork.</p>
 <h2 id="config-as-code-deployrailwaytoml">Config-as-code: <code>deploy/railway.toml</code><a class="headerlink" href="#config-as-code-deployrailwaytoml" title="Permanent link">&para;</a></h2>
-<p>Build and deploy behavior is pinned in <a href="../../deploy/railway.toml"><code>deploy/railway.toml</code></a>:</p>
+<p>Build and deploy behavior is pinned in <code>deploy/railway.toml</code> (in the repository):</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">[build]</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">builder</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;DOCKERFILE&quot;</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">dockerfilePath</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;deploy/Dockerfile&quot;</span>
@@ -1296,7 +1296,7 @@ private fork.</p>
 <p>The <code>startCommand</code> is the same entrypoint the container ships with: it runs
 <code>upgrade_to_head</code> (the programmatic, idempotent Alembic upgrade — never raw
 <code>alembic</code>) and then launches <code>uvicorn --factory spotdl_server.app:create_app</code>.</p>
-<h2 id="migrate-on-boot-numreplicas-1-read-before-scaling">Migrate-on-boot ⟷ <code>numReplicas = 1</code> (READ BEFORE SCALING)<a class="headerlink" href="#migrate-on-boot-numreplicas-1-read-before-scaling" title="Permanent link">&para;</a></h2>
+<h2 id="migrate-on-boot-and-scaling">Migrate-on-boot ⟷ <code>numReplicas = 1</code> (READ BEFORE SCALING)<a class="headerlink" href="#migrate-on-boot-and-scaling" title="Permanent link">&para;</a></h2>
 <p>Migrations run <strong>on boot, inside the entrypoint</strong> (CONTRACT B). That is only
 race-free with a <strong>single instance</strong>. <code>numReplicas = 1</code> is therefore a hard
 safety coupling, not a capacity choice:</p>
