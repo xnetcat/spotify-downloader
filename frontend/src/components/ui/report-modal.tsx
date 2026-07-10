@@ -1,8 +1,18 @@
 import { useState } from "react";
-import { clsx } from "clsx";
+import { ChevronDown, Flag } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Modal } from "./modal";
 import { Button } from "./button";
+import { Label } from "./label";
+import { Textarea } from "./textarea";
+import { Alert, AlertDescription } from "./alert";
 import type { MetadataReportEntityType, CreateMetadataReportRequest } from "@/types";
+
+const controlClass = cn(
+  "w-full rounded-md border border-input bg-surface px-3 py-2 text-sm text-foreground",
+  "placeholder:text-faint outline-none transition-colors",
+  "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
+);
 
 export interface ReportModalProps {
   /** Whether the modal is open */
@@ -47,7 +57,7 @@ export function ReportModal({
     setError(null);
 
     if (!selectedField || !suggestedValue.trim()) {
-      setError("Please select a field and provide a suggested value");
+      setError("Select a field and provide a suggested value.");
       return;
     }
 
@@ -63,13 +73,12 @@ export function ReportModal({
         description: description.trim() || undefined,
       });
 
-      // Reset form and close
       setSelectedField("");
       setSuggestedValue("");
       setDescription("");
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to submit report");
+      setError(err instanceof Error ? err.message : "Failed to submit report.");
     } finally {
       setIsSubmitting(false);
     }
@@ -87,126 +96,78 @@ export function ReportModal({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Report Incorrect Data"
+      title="Report incorrect data"
       description={`Report an issue with "${entityName}"`}
       size="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Field selector */}
-        <div>
-          <label
-            htmlFor="field"
-            className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5"
-          >
-            Which field is incorrect?
-          </label>
-          <select
-            id="field"
-            value={selectedField}
-            onChange={(e) => {
-              setSelectedField(e.target.value);
-              setSuggestedValue("");
-            }}
-            className={clsx(
-              "w-full px-3 py-2.5 rounded-xl",
-              "bg-[var(--bg-surface)] border border-[var(--color-border)]",
-              "text-[var(--color-text-primary)]",
-              "focus:outline-none focus:ring-2 focus:ring-[var(--accent-safe)] focus:border-transparent"
-            )}
-            required
-          >
-            <option value="">Select a field...</option>
-            {fields.map((field) => (
-              <option key={field.name} value={field.name}>
-                {field.label}
-              </option>
-            ))}
-          </select>
+        <div className="space-y-1.5">
+          <Label htmlFor="field">Which field is incorrect?</Label>
+          <div className="relative">
+            <select
+              id="field"
+              value={selectedField}
+              onChange={(e) => {
+                setSelectedField(e.target.value);
+                setSuggestedValue("");
+              }}
+              className={cn(controlClass, "h-9 appearance-none pr-9")}
+              required
+            >
+              <option value="">Select a field</option>
+              {fields.map((field) => (
+                <option key={field.name} value={field.name}>
+                  {field.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
+          </div>
         </div>
 
-        {/* Current value (read-only) */}
         {selectedFieldData && (
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
-              Current value
-            </label>
-            <div
-              className={clsx(
-                "px-3 py-2.5 rounded-xl",
-                "bg-[var(--bg-void)] border border-[var(--color-border-subtle)]",
-                "text-[var(--color-text-muted)]"
-              )}
-            >
-              {selectedFieldData.currentValue || <em>Empty</em>}
+          <div className="space-y-1.5">
+            <Label>Current value</Label>
+            <div className="rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
+              {selectedFieldData.currentValue || <em className="text-faint">Empty</em>}
             </div>
           </div>
         )}
 
-        {/* Suggested value */}
-        <div>
-          <label
-            htmlFor="suggestedValue"
-            className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5"
-          >
-            Correct value
-          </label>
+        <div className="space-y-1.5">
+          <Label htmlFor="suggestedValue">Correct value</Label>
           <input
             id="suggestedValue"
             type="text"
             value={suggestedValue}
             onChange={(e) => setSuggestedValue(e.target.value)}
-            placeholder="Enter the correct value..."
-            className={clsx(
-              "w-full px-3 py-2.5 rounded-xl",
-              "bg-[var(--bg-surface)] border border-[var(--color-border)]",
-              "text-[var(--color-text-primary)]",
-              "placeholder:text-[var(--color-text-muted)]",
-              "focus:outline-none focus:ring-2 focus:ring-[var(--accent-safe)] focus:border-transparent"
-            )}
+            placeholder="Enter the correct value"
+            className={cn(controlClass, "h-9")}
             required
           />
         </div>
 
-        {/* Description (optional) */}
-        <div>
-          <label
-            htmlFor="description"
-            className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5"
-          >
-            Additional details{" "}
-            <span className="text-[var(--color-text-muted)]">(optional)</span>
-          </label>
-          <textarea
+        <div className="space-y-1.5">
+          <Label htmlFor="description">
+            Additional details <span className="text-faint">(optional)</span>
+          </Label>
+          <Textarea
             id="description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Explain why this is incorrect or provide sources..."
+            placeholder="Explain why this is incorrect or provide sources"
             rows={3}
-            className={clsx(
-              "w-full px-3 py-2.5 rounded-xl resize-none",
-              "bg-[var(--bg-surface)] border border-[var(--color-border)]",
-              "text-[var(--color-text-primary)]",
-              "placeholder:text-[var(--color-text-muted)]",
-              "focus:outline-none focus:ring-2 focus:ring-[var(--accent-safe)] focus:border-transparent"
-            )}
           />
         </div>
 
-        {/* Error message */}
         {error && (
-          <div className="px-3 py-2 rounded-lg bg-[var(--accent-peak)]/10 text-[var(--accent-peak)] text-sm">
-            {error}
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
-        {/* Actions */}
         <div className="flex items-center justify-end gap-3 pt-2">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={handleClose}
-            disabled={isSubmitting}
-          >
+          <Button type="button" variant="ghost" onClick={handleClose} disabled={isSubmitting}>
             Cancel
           </Button>
           <Button
@@ -215,7 +176,7 @@ export function ReportModal({
             isLoading={isSubmitting}
             disabled={!selectedField || !suggestedValue.trim()}
           >
-            Submit Report
+            Submit report
           </Button>
         </div>
       </form>
@@ -224,7 +185,7 @@ export function ReportModal({
 }
 
 /**
- * Button to trigger the report modal
+ * Button to trigger the report modal.
  */
 export interface ReportButtonProps {
   onClick: () => void;
@@ -234,24 +195,17 @@ export interface ReportButtonProps {
 export function ReportButton({ onClick, className }: ReportButtonProps) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={clsx(
-        "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg",
-        "text-sm text-[var(--color-text-muted)]",
-        "hover:text-[var(--accent-peak)] hover:bg-[var(--accent-peak)]/10",
-        "transition-colors duration-150",
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground",
+        "transition-colors hover:bg-destructive/10 hover:text-destructive",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
         className
       )}
     >
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-        />
-      </svg>
-      Report Incorrect Data
+      <Flag className="size-4" />
+      Report incorrect data
     </button>
   );
 }

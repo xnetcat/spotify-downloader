@@ -1,5 +1,5 @@
-import { clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { Music2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export interface KeySignatureBadgeProps {
   /** Key number 0-11 (C, C#, D, D#, E, F, F#, G, G#, A, A#, B) */
@@ -38,61 +38,35 @@ const KEY_NAMES_FLAT: Record<number, string> = {
 };
 
 // Key families for color coding
-// Natural keys: C, F, G -> accent-safe (green)
-// Sharp/Flat common: D, A, E -> accent-needle (orange)
-// More chromatic: B, F#, C# -> accent-cool (blue)
+// Natural keys: C, F, G -> success · common (D, A, E) -> primary · chromatic -> info
 type KeyFamily = "natural" | "common" | "chromatic";
 
 const KEY_FAMILIES: Record<number, KeyFamily> = {
-  0: "natural",  // C
+  0: "natural", // C
   1: "chromatic", // C#
-  2: "common",   // D
+  2: "common", // D
   3: "chromatic", // D#
-  4: "common",   // E
-  5: "natural",  // F
+  4: "common", // E
+  5: "natural", // F
   6: "chromatic", // F#
-  7: "natural",  // G
+  7: "natural", // G
   8: "chromatic", // G#
-  9: "common",   // A
+  9: "common", // A
   10: "chromatic", // A#
   11: "chromatic", // B
 };
 
-const familyColors: Record<KeyFamily, { bg: string; text: string; border: string }> = {
-  natural: {
-    bg: "bg-[var(--accent-safe)]/10",
-    text: "text-[var(--accent-safe)]",
-    border: "border-[var(--accent-safe)]/30",
-  },
-  common: {
-    bg: "bg-[var(--accent-needle)]/10",
-    text: "text-[var(--accent-needle)]",
-    border: "border-[var(--accent-needle)]/30",
-  },
-  chromatic: {
-    bg: "bg-[var(--accent-cool)]/10",
-    text: "text-[var(--accent-cool)]",
-    border: "border-[var(--accent-cool)]/30",
-  },
+const familyColors: Record<KeyFamily, string> = {
+  natural: "bg-success/10 text-success border-success/30",
+  common: "bg-primary/10 text-primary border-primary/30",
+  chromatic: "bg-info/10 text-info border-info/30",
 };
 
-// Minor keys get slightly muted colors
-const familyColorsMinor: Record<KeyFamily, { bg: string; text: string; border: string }> = {
-  natural: {
-    bg: "bg-[var(--accent-safe)]/5",
-    text: "text-[var(--accent-safe)]/80",
-    border: "border-[var(--accent-safe)]/20",
-  },
-  common: {
-    bg: "bg-[var(--accent-needle)]/5",
-    text: "text-[var(--accent-needle)]/80",
-    border: "border-[var(--accent-needle)]/20",
-  },
-  chromatic: {
-    bg: "bg-[var(--accent-cool)]/5",
-    text: "text-[var(--accent-cool)]/80",
-    border: "border-[var(--accent-cool)]/20",
-  },
+// Minor keys read slightly quieter
+const familyColorsMinor: Record<KeyFamily, string> = {
+  natural: "bg-success/5 text-success/80 border-success/20",
+  common: "bg-primary/5 text-primary/80 border-primary/20",
+  chromatic: "bg-info/5 text-info/80 border-info/20",
 };
 
 const sizeClasses = {
@@ -101,26 +75,24 @@ const sizeClasses = {
   lg: "px-3 py-1.5 text-base",
 };
 
+const iconSize = {
+  sm: "size-3",
+  md: "size-3.5",
+  lg: "size-4",
+};
+
 /**
- * Badge displaying musical key signature (e.g., "C Major", "A Minor")
- * Color-coded by key family with muted colors for minor keys
+ * Badge displaying musical key signature (e.g., "C major", "A minor"),
+ * colour-coded by key family with muted tones for minor keys.
  */
-export function KeySignatureBadge({
-  keyNum,
-  mode,
-  size = "md",
-  className,
-}: KeySignatureBadgeProps) {
-  // Handle null values
+export function KeySignatureBadge({ keyNum, mode, size = "md", className }: KeySignatureBadgeProps) {
   if (keyNum === null || keyNum < 0 || keyNum > 11) {
     return (
       <span
-        className={twMerge(
-          clsx(
-            "inline-flex items-center gap-1.5 rounded-lg font-medium border",
-            "bg-[var(--bg-surface)] text-[var(--color-text-muted)] border-[var(--color-border-subtle)]",
-            sizeClasses[size]
-          ),
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded-md border font-mono font-medium",
+          "bg-surface text-muted-foreground border-border",
+          sizeClasses[size],
           className
         )}
       >
@@ -131,39 +103,22 @@ export function KeySignatureBadge({
 
   const keyName = KEY_NAMES[keyNum];
   const isMajor = mode === 1;
-  const modeName = isMajor ? "Major" : "Minor";
+  const modeName = isMajor ? "major" : "minor";
   const family = KEY_FAMILIES[keyNum];
   const colors = isMajor ? familyColors[family] : familyColorsMinor[family];
 
   return (
     <span
-      className={twMerge(
-        clsx(
-          "inline-flex items-center gap-1.5 rounded-lg font-medium border",
-          "transition-colors duration-200",
-          colors.bg,
-          colors.text,
-          colors.border,
-          sizeClasses[size]
-        ),
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-md border font-medium transition-colors",
+        colors,
+        sizeClasses[size],
         className
       )}
-      title={`Key: ${keyName} ${modeName}`}
+      title={`Key: ${keyName} ${isMajor ? "Major" : "Minor"}`}
     >
-      {/* Musical note icon */}
-      <svg
-        className={clsx(
-          "flex-shrink-0",
-          size === "sm" && "w-3 h-3",
-          size === "md" && "w-3.5 h-3.5",
-          size === "lg" && "w-4 h-4"
-        )}
-        fill="currentColor"
-        viewBox="0 0 20 20"
-      >
-        <path d="M18 3v12.535a3.5 3.5 0 1 1-2-3.164V6.121l-8 1.778v8.566a3.5 3.5 0 1 1-2-3.164V5.107a1 1 0 0 1 .757-.97l10-2.222A1 1 0 0 1 18 3z" />
-      </svg>
-      <span className="font-semibold">{keyName}</span>
+      <Music2 className={cn("shrink-0", iconSize[size])} aria-hidden />
+      <span className="font-mono font-semibold tnum">{keyName}</span>
       <span className="opacity-70">{modeName}</span>
     </span>
   );

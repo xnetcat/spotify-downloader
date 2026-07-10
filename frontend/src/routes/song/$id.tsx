@@ -1,14 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo, useCallback } from "react";
-import {
-  useInternalSong,
-  useRefreshEntity,
-} from "@/api/entities";
+import { motion } from "motion/react";
+import { useInternalSong, useRefreshEntity } from "@/api/entities";
 import { useCreateReport } from "@/api";
-import {
-  Spinner,
-  EntityErrorCard,
-} from "@/components/ui";
+import { EntityErrorCard, Skeleton } from "@/components/ui";
 import { ReportModal } from "@/components/ui/report-modal";
 import {
   SongHeader,
@@ -25,6 +20,34 @@ import type { CreateMetadataReportRequest } from "@/types";
 export const Route = createFileRoute("/song/$id")({
   component: SongPage,
 });
+
+function SongPageSkeleton() {
+  return (
+    <div className="space-y-10">
+      <div className="flex flex-col gap-6 sm:flex-row sm:gap-8">
+        <Skeleton className="mx-auto aspect-square w-full max-w-[200px] rounded-md sm:mx-0" />
+        <div className="flex-1 space-y-4">
+          <Skeleton className="h-3 w-16" />
+          <Skeleton className="h-9 w-2/3" />
+          <Skeleton className="h-5 w-1/3" />
+          <Skeleton className="h-3.5 w-1/2" />
+          <div className="flex gap-2 pt-2">
+            <Skeleton className="h-9 w-40" />
+            <Skeleton className="h-9 w-32" />
+          </div>
+        </div>
+      </div>
+      <div className="space-y-4">
+        <Skeleton className="h-3 w-24" />
+        <div className="grid gap-4 sm:grid-cols-2">
+          {Array.from({ length: 6 }, (_, i) => (
+            <Skeleton key={i} className="h-10" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function SongPage() {
   const { id } = Route.useParams();
@@ -71,12 +94,7 @@ function SongPage() {
   }, [id, refreshMetadata]);
 
   if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 gap-6">
-        <Spinner size="lg" />
-        <p className="text-zinc-400">Loading track...</p>
-      </div>
-    );
+    return <SongPageSkeleton />;
   }
 
   if (error || !song) {
@@ -84,8 +102,12 @@ function SongPage() {
   }
 
   return (
-    <div className="space-y-8 animate-slide-up">
-      {/* Hero Section */}
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+      className="space-y-10"
+    >
       <SongHeader
         song={song}
         displayMetadata={displayMetadata}
@@ -94,43 +116,27 @@ function SongPage() {
         onShowReportModal={() => setShowReportModal(true)}
       />
 
-      {/* Multi-Source Metadata Controls & Comparison */}
-      <SongSnapshotsSection
-        songId={id}
-        hasSong={!!song}
-        onSnapshotChange={handleSnapshotChange}
+      <SongSnapshotsSection songId={id} hasSong={!!song} onSnapshotChange={handleSnapshotChange} />
+
+      <SongMetadataPanel
+        song={song}
+        displayMetadata={displayMetadata}
+        entityId={id}
+        activeMetadataSource={snapshotInfo?.activeSource ?? null}
       />
 
-      {/* Content Grid */}
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Left Column - Matches & Lyrics */}
-        <div className="lg:col-span-2 space-y-6">
-          <SongMatchesSection songId={id} />
-          <SongLyricsSection songId={id} hasSong={!!song} />
-        </div>
+      {displayMetadata?.audio_features && (
+        <SongAudioFeatures
+          features={displayMetadata.audio_features}
+          expanded={showAllFeatures}
+          onToggleExpand={() => setShowAllFeatures(!showAllFeatures)}
+        />
+      )}
 
-        {/* Right Column - Metadata, Features & Links */}
-        <div className="space-y-6">
-          {/* Audio Features Panel */}
-          {displayMetadata?.audio_features && (
-            <SongAudioFeatures
-              features={displayMetadata.audio_features}
-              expanded={showAllFeatures}
-              onToggleExpand={() => setShowAllFeatures(!showAllFeatures)}
-            />
-          )}
+      <SongMatchesSection songId={id} />
 
-          {/* Metadata, Platform Links, Technical Info */}
-          <SongMetadataPanel
-            song={song}
-            displayMetadata={displayMetadata}
-            entityId={id}
-            activeMetadataSource={snapshotInfo?.activeSource ?? null}
-          />
-        </div>
-      </div>
+      <SongLyricsSection songId={id} hasSong={!!song} />
 
-      {/* Report Modal */}
       <ReportModal
         isOpen={showReportModal}
         onClose={() => setShowReportModal(false)}
@@ -140,6 +146,6 @@ function SongPage() {
         entityName={song.name}
         fields={reportableFields}
       />
-    </div>
+    </motion.div>
   );
 }

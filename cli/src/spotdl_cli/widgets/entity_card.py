@@ -56,15 +56,15 @@ class EntityCard(Widget, can_focus=True):
         height: 5;
         width: 100%;
         padding: 0 1;
-        background: #242628;
+        background: #171b24;
         margin-bottom: 0;
     }
     EntityCard:hover {
-        background: #2c2e32;
+        background: #1e2430;
     }
     EntityCard:focus {
-        border-left: thick #e8764b;
-        background: #2c2e32;
+        border-left: thick #f5a623;
+        background: #1e2430;
     }
     EntityCard .ec-row {
         height: 100%;
@@ -73,14 +73,14 @@ class EntityCard(Widget, can_focus=True):
     EntityCard .ec-cover {
         width: 10;
         height: 5;
-        background: #0c0c0e;
+        background: #0d0f15;
         content-align: center middle;
     }
     EntityCard .ec-cover-placeholder {
         width: 100%;
         height: 100%;
         content-align: center middle;
-        color: #6b6b76;
+        color: #5a6274;
     }
     EntityCard .ec-cover-image {
         width: 100%;
@@ -92,26 +92,26 @@ class EntityCard(Widget, can_focus=True):
         padding: 0 1;
     }
     EntityCard .ec-name {
-        color: #fafafa;
+        color: #e8eaf0;
         text-style: bold;
         height: 1;
     }
     EntityCard .ec-subtitle {
-        color: #a8a8b3;
+        color: #8b93a7;
         height: 1;
     }
     EntityCard .ec-platforms {
-        color: #6b6b76;
+        color: #5a6274;
         height: 1;
     }
     EntityCard .ec-arrow {
         width: 3;
         height: 100%;
         content-align: center middle;
-        color: #6b6b76;
+        color: #5a6274;
     }
     EntityCard .ec-arrow:hover {
-        color: #a8a8b3;
+        color: #8b93a7;
     }
     """
 

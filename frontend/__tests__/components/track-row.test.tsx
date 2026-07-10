@@ -70,7 +70,6 @@ describe("TrackRow", () => {
     it("renders duration in mm:ss format", () => {
       render(<TrackRow track={mockTrack} />);
 
-      // 210 seconds = 3:30
       expect(screen.getByText("3:30")).toBeInTheDocument();
     });
 
@@ -103,12 +102,9 @@ describe("TrackRow", () => {
       expect(screen.getByText("Test Album")).toBeInTheDocument();
     });
 
-    it("hides album name by default", () => {
+    it("shows artist by default", () => {
       render(<TrackRow track={mockTrack} />);
 
-      // Album name should not be shown as separate text (only artist)
-      const albumText = screen.queryByText("Test Album");
-      // It might be in the subtitle combined with artist
       expect(screen.getByText("Test Artist")).toBeInTheDocument();
     });
 
@@ -150,8 +146,6 @@ describe("TrackRow", () => {
       const handleClick = vi.fn();
       const { container } = render(<TrackRow track={mockTrack} onClick={handleClick} />);
 
-      // The onClick is attached to the inner content div, triggered via the wrapper
-      const wrapper = screen.getByRole("button");
       const contentDiv = container.querySelector("[class*='group flex items-center']");
       fireEvent.click(contentDiv!);
 
@@ -164,8 +158,7 @@ describe("TrackRow", () => {
       const handleClick = vi.fn();
       render(<TrackRow track={mockTrack} onClick={handleClick} />);
 
-      const row = screen.getByRole("button");
-      fireEvent.keyDown(row, { key: "Enter" });
+      fireEvent.keyDown(screen.getByRole("button"), { key: "Enter" });
 
       expect(handleClick).toHaveBeenCalledTimes(1);
     });
@@ -174,8 +167,7 @@ describe("TrackRow", () => {
       const handleClick = vi.fn();
       render(<TrackRow track={mockTrack} onClick={handleClick} />);
 
-      const row = screen.getByRole("button");
-      fireEvent.keyDown(row, { key: " " });
+      fireEvent.keyDown(screen.getByRole("button"), { key: " " });
 
       expect(handleClick).toHaveBeenCalledTimes(1);
     });
@@ -184,8 +176,7 @@ describe("TrackRow", () => {
       const handleClick = vi.fn();
       render(<TrackRow track={mockTrack} onClick={handleClick} />);
 
-      const row = screen.getByRole("button");
-      expect(row).toHaveAttribute("tabIndex", "0");
+      expect(screen.getByRole("button")).toHaveAttribute("tabIndex", "0");
     });
   });
 
@@ -194,17 +185,13 @@ describe("TrackRow", () => {
       const handleDownload = vi.fn();
       render(<TrackRow track={mockTrack} onDownload={handleDownload} />);
 
-      expect(
-        screen.getByRole("button", { name: /Download/i })
-      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Download/i })).toBeInTheDocument();
     });
 
     it("hides download button by default", () => {
       render(<TrackRow track={mockTrack} />);
 
-      expect(
-        screen.queryByRole("button", { name: /Download/i })
-      ).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Download/i })).not.toBeInTheDocument();
     });
 
     it("calls onDownload when download button is clicked", () => {
@@ -220,11 +207,7 @@ describe("TrackRow", () => {
       const handleClick = vi.fn();
       const handleDownload = vi.fn();
       render(
-        <TrackRow
-          track={mockTrack}
-          onClick={handleClick}
-          onDownload={handleDownload}
-        />
+        <TrackRow track={mockTrack} onClick={handleClick} onDownload={handleDownload} />
       );
 
       fireEvent.click(screen.getByRole("button", { name: /Download/i }));
@@ -236,12 +219,9 @@ describe("TrackRow", () => {
 
   describe("active and playing states", () => {
     it("applies active styles", () => {
-      const { container } = render(
-        <TrackRow track={mockTrack} isActive />
-      );
+      const { container } = render(<TrackRow track={mockTrack} isActive />);
 
-      const row = container.querySelector("[class*='bg-'][class*='accent-safe']");
-      expect(row).toBeInTheDocument();
+      expect(container.querySelector('[class*="bg-primary/10"]')).toBeInTheDocument();
     });
 
     it("shows playing indicator when isPlaying", () => {
@@ -249,11 +229,9 @@ describe("TrackRow", () => {
         <TrackRow track={mockTrack} position={1} isPlaying />
       );
 
-      // Playing indicator shows animated bars instead of position number
+      // The now-playing indicator replaces the position number with a meter.
       expect(screen.queryByText("01")).not.toBeInTheDocument();
-      // Should have playing indicator spans with animation
-      const animatedBars = container.querySelectorAll("[class*='animate-']");
-      expect(animatedBars.length).toBeGreaterThan(0);
+      expect(container.querySelector(".meter")).toBeInTheDocument();
     });
 
     it("shows position number when not playing", () => {
@@ -265,54 +243,41 @@ describe("TrackRow", () => {
 
   describe("compact mode", () => {
     it("applies compact padding", () => {
-      const { container } = render(
-        <TrackRow track={mockTrack} compact />
-      );
+      const { container } = render(<TrackRow track={mockTrack} compact />);
 
-      const row = container.querySelector(".px-3.py-2");
-      expect(row).toBeInTheDocument();
+      expect(container.querySelector(".px-3.py-2")).toBeInTheDocument();
     });
 
     it("applies smaller text in compact mode", () => {
-      const { container } = render(
-        <TrackRow track={mockTrack} compact />
-      );
+      render(<TrackRow track={mockTrack} compact />);
 
-      const name = screen.getByText("Test Song");
-      expect(name).toHaveClass("text-sm");
+      expect(screen.getByText("Test Song")).toHaveClass("text-sm");
     });
   });
 
   describe("fallback cover", () => {
     it("shows fallback icon when no cover", () => {
-      const { container } = render(
-        <TrackRow track={mockTrackNoCover} />
-      );
+      const { container } = render(<TrackRow track={mockTrackNoCover} />);
 
-      // Should show fallback SVG
-      const fallback = container.querySelector("svg");
-      expect(fallback).toBeInTheDocument();
+      expect(container.querySelector("svg")).toBeInTheDocument();
     });
   });
 
   describe("duration formatting", () => {
     it("formats short duration", () => {
-      const shortTrack = { ...mockTrack, duration: 65 };
-      render(<TrackRow track={shortTrack} />);
+      render(<TrackRow track={{ ...mockTrack, duration: 65 }} />);
 
       expect(screen.getByText("1:05")).toBeInTheDocument();
     });
 
     it("formats long duration", () => {
-      const longTrack = { ...mockTrack, duration: 605 };
-      render(<TrackRow track={longTrack} />);
+      render(<TrackRow track={{ ...mockTrack, duration: 605 }} />);
 
       expect(screen.getByText("10:05")).toBeInTheDocument();
     });
 
     it("pads seconds with zero", () => {
-      const track = { ...mockTrack, duration: 61 };
-      render(<TrackRow track={track} />);
+      render(<TrackRow track={{ ...mockTrack, duration: 61 }} />);
 
       expect(screen.getByText("1:01")).toBeInTheDocument();
     });
@@ -353,18 +318,15 @@ describe("TrackRowList", () => {
         <TrackRowList tracks={mockTracks} onTrackClick={handleTrackClick} />
       );
 
-      // Find all content divs (the ones with the onClick)
       const contentDivs = container.querySelectorAll("[class*='group flex items-center']");
-      fireEvent.click(contentDivs[1]); // Click second track
+      fireEvent.click(contentDivs[1]);
 
       expect(handleTrackClick).toHaveBeenCalledWith(mockTracks[1], 1);
     });
 
     it("calls onDownload with track", () => {
       const handleDownload = vi.fn();
-      render(
-        <TrackRowList tracks={mockTracks} onDownload={handleDownload} />
-      );
+      render(<TrackRowList tracks={mockTracks} onDownload={handleDownload} />);
 
       const downloadButtons = screen.getAllByRole("button", { name: /Download/i });
       fireEvent.click(downloadButtons[1]);
@@ -379,20 +341,17 @@ describe("TrackRowList", () => {
         <TrackRowList tracks={mockTracks} activeTrackId="track-2" />
       );
 
-      // Second track should have active styles
-      const rows = container.querySelectorAll("[class*='px-']");
-      expect(rows[1]).toHaveClass("bg-[var(--accent-safe)]/10");
+      const activeEl = container.querySelector('[class*="bg-primary/10"]');
+      expect(activeEl).toBeInTheDocument();
+      expect(activeEl).toHaveTextContent("Second Song");
     });
 
     it("marks correct track as playing", () => {
-      const { container } = render(
-        <TrackRowList tracks={mockTracks} playingTrackId="track-2" />
-      );
+      render(<TrackRowList tracks={mockTracks} playingTrackId="track-2" />);
 
-      // Second track should show playing indicator
-      expect(screen.getByText("01")).toBeInTheDocument(); // First track shows number
-      expect(screen.queryByText("02")).not.toBeInTheDocument(); // Second track shows animation
-      expect(screen.getByText("03")).toBeInTheDocument(); // Third track shows number
+      expect(screen.getByText("01")).toBeInTheDocument();
+      expect(screen.queryByText("02")).not.toBeInTheDocument();
+      expect(screen.getByText("03")).toBeInTheDocument();
     });
   });
 
@@ -422,9 +381,7 @@ describe("TrackRowList", () => {
     });
 
     it("passes compact to rows", () => {
-      const { container } = render(
-        <TrackRowList tracks={mockTracks} compact />
-      );
+      const { container } = render(<TrackRowList tracks={mockTracks} compact />);
 
       const compactRows = container.querySelectorAll(".px-3.py-2");
       expect(compactRows.length).toBe(3);

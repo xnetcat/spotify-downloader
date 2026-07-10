@@ -1,8 +1,9 @@
-/* SpotDL CLI — "Midnight Vinyl" design system
+/* SpotDL CLI — "Control Room" design system
  *
- * Premium audio feel, clean matte surfaces with warm accent pops,
- * depth through layering (bg-color differences, not borders everywhere),
- * accent restraint, spacing-driven hierarchy.
+ * Broadcast-console precision: blue-ink black surfaces, flat panels with
+ * hairline borders, one phosphor-amber accent for focus/active/meters, and
+ * segmented LED meters (▰▱) wherever progress or quality appears. Palette is
+ * shared hex-for-hex with the web UI dark theme.
  *
  * Sections:
  *  1. Variables
@@ -27,35 +28,42 @@
    1. VARIABLES — Design tokens
    ========================================================================== */
 
-/* Accent palette */
-$accent-primary: #e8764b;
-$accent-secondary: #4ecdc4;
-$accent-success: #00d084;
-$accent-error: #ff3333;
-$accent-warning: #ffd93d;
-$accent-focus: #c4a35a;
+/* Accent palette — one warm amber accent + semantic signals */
+$accent-primary: #f5a623;
+$accent-secondary: #56c8d8;
+$accent-success: #4ade80;
+$accent-error: #f4506c;
+$accent-warning: #facc15;
+$accent-focus: #f5a623;
 
-/* Backgrounds (darkest -> lightest) */
-$bg-void: #08080a;
-$bg-inset: #0c0c0e;
-$bg-chassis: #0f1012;
-$bg-panel: #161819;
-$bg-elevated: #1c1e20;
-$bg-surface: #242628;
-$bg-hover: #2c2e32;
+/* Backgrounds (darkest -> lightest) — blue-ink black ramp */
+$bg-void: #08090d;
+$bg-inset: #0d0f15;
+$bg-chassis: #0b0d12;
+$bg-panel: #12151c;
+$bg-elevated: #171b24;
+$bg-surface: #1e2430;
+$bg-hover: #262d3a;
 
 /* Text */
-$text-primary: #fafafa;
-$text-accent: #e8e0d0;
-$text-secondary: #a8a8b3;
-$text-muted: #6b6b76;
-$text-dim: #454550;
+$text-primary: #e8eaf0;
+$text-accent: #eef0f6;
+$text-secondary: #8b93a7;
+$text-muted: #5a6274;
+$text-dim: #3a4150;
 
-/* Borders */
-$border-color: #2f2f33;
-$border-subtle: #232326;
+/* Borders — hairlines */
+$border-color: #262d3a;
+$border-subtle: #1c222d;
 
-/* Platform colors */
+/* Accent tints — dark chips for badges */
+$tint-primary: #2b1d05;
+$tint-success: #0d2318;
+$tint-warning: #2a2205;
+$tint-error: #2a0e17;
+$tint-info: #0c2329;
+
+/* Platform colors (brand facts, unchanged) */
 $platform-spotify: #1db954;
 $platform-youtube: #ff0000;
 $platform-deezer: #a238ff;
@@ -186,13 +194,14 @@ Button:focus {
 
 Button.-primary {
     background: $accent-primary;
-    color: $text-primary;
+    color: $bg-void;
+    text-style: bold;
     border: solid $accent-primary;
 }
 
 Button.-primary:hover {
-    background: #d0684a;
-    border: solid #d0684a;
+    background: #d68f14;
+    border: solid #d68f14;
 }
 
 Button.-success {
@@ -202,7 +211,7 @@ Button.-success {
 }
 
 Button.-success:hover {
-    background: #00e08a;
+    background: #62e58f;
 }
 
 Button.-warning {
@@ -273,22 +282,22 @@ Checkbox:focus {
 }
 
 .badge-success {
-    background: #003322;
+    background: $tint-success;
     color: $accent-success;
 }
 
 .badge-warning {
-    background: #332200;
+    background: $tint-warning;
     color: $accent-warning;
 }
 
 .badge-error {
-    background: #330011;
+    background: $tint-error;
     color: $accent-error;
 }
 
 .badge-info {
-    background: #002233;
+    background: $tint-info;
     color: $accent-secondary;
 }
 
@@ -325,22 +334,22 @@ Checkbox:focus {
 
 /* Entity type badges */
 .badge-artist {
-    background: #332200;
+    background: $tint-warning;
     color: $accent-warning;
 }
 
 .badge-track {
-    background: #003322;
+    background: $tint-success;
     color: $accent-success;
 }
 
 .badge-album {
-    background: #002233;
+    background: $tint-info;
     color: $accent-secondary;
 }
 
 .badge-playlist {
-    background: #331100;
+    background: $tint-primary;
     color: $accent-primary;
 }
 
@@ -351,12 +360,12 @@ Checkbox:focus {
 }
 
 .badge-album-ep {
-    background: #002233;
+    background: $tint-info;
     color: $accent-secondary;
 }
 
 .badge-album-compilation {
-    background: #332200;
+    background: $tint-warning;
     color: $accent-warning;
 }
 
@@ -367,43 +376,44 @@ Checkbox:focus {
 }
 
 .match-badge-best {
-    background: #003322;
+    background: $tint-success;
     color: $accent-success;
 }
 
 .match-badge-user {
-    background: #002233;
+    background: $tint-info;
     color: $accent-secondary;
 }
 
 .match-badge-pending {
-    background: #332200;
+    background: $tint-warning;
     color: $accent-warning;
 }
 
 .match-badge-verified {
-    background: #003322;
+    background: $tint-success;
     color: $accent-success;
 }
 
 /* ---- DataTable ---- */
 
 DataTable {
-    background: $bg-surface;
+    background: $bg-panel;
     border: none;
     height: auto;
     max-height: 100%;
 }
 
 DataTable > .datatable--header {
-    background: $bg-elevated;
-    color: $text-accent;
+    background: $bg-panel;
+    color: $text-muted;
     text-style: bold;
 }
 
 DataTable > .datatable--cursor {
     background: $accent-primary;
-    color: $text-primary;
+    color: $bg-void;
+    text-style: bold;
 }
 
 DataTable > .datatable--hover {
@@ -412,10 +422,11 @@ DataTable > .datatable--hover {
 
 DataTable:focus > .datatable--cursor {
     background: $accent-primary;
+    color: $bg-void;
 }
 
 DataTable > .datatable--even-row {
-    background: $bg-inset;
+    background: $bg-elevated;
 }
 
 /* ---- Progress & Status ---- */
@@ -740,7 +751,8 @@ ContentSwitcher {
 
 .filter-btn.active {
     background: $accent-primary;
-    color: $text-primary;
+    color: $bg-void;
+    text-style: bold;
     border: solid $accent-primary;
 }
 
@@ -837,12 +849,12 @@ ContentSwitcher {
 
 .artist-tile:hover {
     background: $bg-hover;
-    border-left: thick $accent-warning;
+    border-left: thick $accent-primary;
 }
 
 .artist-tile:focus {
     background: $bg-hover;
-    border-left: thick $accent-warning;
+    border-left: thick $accent-primary;
     transition: border 150ms;
 }
 
@@ -923,12 +935,12 @@ ContentSwitcher {
 
 .album-tile:hover {
     background: $bg-hover;
-    border-left: thick $accent-secondary;
+    border-left: thick $accent-primary;
 }
 
 .album-tile:focus {
     background: $bg-hover;
-    border-left: thick $accent-secondary;
+    border-left: thick $accent-primary;
     transition: border 150ms;
 }
 
@@ -1604,7 +1616,8 @@ CoverArt #cover-image {
 
 .queue-filter-active {
     background: $accent-primary;
-    color: $text-primary;
+    color: $bg-void;
+    text-style: bold;
     border: solid $accent-primary;
 }
 
@@ -2256,7 +2269,7 @@ CoverArt #cover-image {
 
 .credentials-badge {
     margin-left: 2;
-    background: #332200;
+    background: $tint-warning;
     color: $accent-warning;
     padding: 0 1;
     text-style: bold;
@@ -2272,12 +2285,12 @@ CoverArt #cover-image {
 }
 
 .cred-status-bar.configured {
-    background: #003322;
+    background: $tint-success;
     border: solid $accent-success;
 }
 
 .cred-status-bar.partial {
-    background: #332200;
+    background: $tint-warning;
     border: solid $accent-warning;
 }
 

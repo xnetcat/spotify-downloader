@@ -10,10 +10,10 @@ describe("ToggleSwitch", () => {
       expect(screen.getByRole("switch")).toBeInTheDocument();
     });
 
-    it("renders hidden checkbox for form integration", () => {
+    it("renders a button as the switch", () => {
       render(<ToggleSwitch checked={false} onChange={() => {}} />);
 
-      expect(screen.getByRole("checkbox", { hidden: true })).toBeInTheDocument();
+      expect(screen.getByRole("switch").tagName).toBe("BUTTON");
     });
 
     it("renders label when provided", () => {
@@ -60,7 +60,7 @@ describe("ToggleSwitch", () => {
 
       const switchEl = screen.getByRole("switch");
       expect(switchEl).toHaveAttribute("aria-checked", "false");
-      expect(switchEl).toHaveClass("bg-[var(--bg-surface)]");
+      expect(switchEl).toHaveAttribute("data-state", "unchecked");
     });
 
     it("reflects checked state", () => {
@@ -68,24 +68,12 @@ describe("ToggleSwitch", () => {
 
       const switchEl = screen.getByRole("switch");
       expect(switchEl).toHaveAttribute("aria-checked", "true");
-      expect(switchEl).toHaveClass("bg-[var(--accent-safe)]");
-    });
-
-    it("syncs hidden checkbox with checked prop", () => {
-      const { rerender } = render(
-        <ToggleSwitch checked={false} onChange={() => {}} />
-      );
-
-      expect(screen.getByRole("checkbox", { hidden: true })).not.toBeChecked();
-
-      rerender(<ToggleSwitch checked={true} onChange={() => {}} />);
-
-      expect(screen.getByRole("checkbox", { hidden: true })).toBeChecked();
+      expect(switchEl).toHaveAttribute("data-state", "checked");
     });
   });
 
   describe("state changes", () => {
-    it("calls onChange when clicked", () => {
+    it("calls onChange with true when toggling on", () => {
       const handleChange = vi.fn();
       render(<ToggleSwitch checked={false} onChange={handleChange} />);
 
@@ -94,68 +82,13 @@ describe("ToggleSwitch", () => {
       expect(handleChange).toHaveBeenCalledWith(true);
     });
 
-    it("calls onChange with false when unchecking", () => {
+    it("calls onChange with false when toggling off", () => {
       const handleChange = vi.fn();
       render(<ToggleSwitch checked={true} onChange={handleChange} />);
 
       fireEvent.click(screen.getByRole("switch"));
 
       expect(handleChange).toHaveBeenCalledWith(false);
-    });
-
-    it("calls onChange when hidden checkbox changes", () => {
-      const handleChange = vi.fn();
-      render(<ToggleSwitch checked={false} onChange={handleChange} />);
-
-      const checkbox = screen.getByRole("checkbox", { hidden: true });
-      fireEvent.click(checkbox);
-
-      expect(handleChange).toHaveBeenCalledWith(true);
-    });
-  });
-
-  describe("keyboard interactions", () => {
-    it("toggles on Enter key", () => {
-      const handleChange = vi.fn();
-      render(<ToggleSwitch checked={false} onChange={handleChange} />);
-
-      const switchEl = screen.getByRole("switch");
-      fireEvent.keyDown(switchEl, { key: "Enter" });
-
-      expect(handleChange).toHaveBeenCalledWith(true);
-    });
-
-    it("toggles on Space key", () => {
-      const handleChange = vi.fn();
-      render(<ToggleSwitch checked={false} onChange={handleChange} />);
-
-      const switchEl = screen.getByRole("switch");
-      fireEvent.keyDown(switchEl, { key: " " });
-
-      expect(handleChange).toHaveBeenCalledWith(true);
-    });
-
-    it("does not toggle on other keys", () => {
-      const handleChange = vi.fn();
-      render(<ToggleSwitch checked={false} onChange={handleChange} />);
-
-      const switchEl = screen.getByRole("switch");
-      fireEvent.keyDown(switchEl, { key: "Tab" });
-      fireEvent.keyDown(switchEl, { key: "Escape" });
-      fireEvent.keyDown(switchEl, { key: "a" });
-
-      expect(handleChange).not.toHaveBeenCalled();
-    });
-
-    it("prevents default on Space key", () => {
-      const handleChange = vi.fn();
-      render(<ToggleSwitch checked={false} onChange={handleChange} />);
-
-      const switchEl = screen.getByRole("switch");
-      const event = fireEvent.keyDown(switchEl, { key: " " });
-
-      // The event should have been handled
-      expect(handleChange).toHaveBeenCalled();
     });
   });
 
@@ -169,21 +102,10 @@ describe("ToggleSwitch", () => {
       expect(handleChange).not.toHaveBeenCalled();
     });
 
-    it("does not respond to keyboard when disabled", () => {
-      const handleChange = vi.fn();
-      render(<ToggleSwitch checked={false} onChange={handleChange} disabled />);
-
-      const switchEl = screen.getByRole("switch");
-      fireEvent.keyDown(switchEl, { key: "Enter" });
-      fireEvent.keyDown(switchEl, { key: " " });
-
-      expect(handleChange).not.toHaveBeenCalled();
-    });
-
-    it("disables hidden checkbox", () => {
+    it("disables the switch button", () => {
       render(<ToggleSwitch checked={false} onChange={() => {}} disabled />);
 
-      expect(screen.getByRole("checkbox", { hidden: true })).toBeDisabled();
+      expect(screen.getByRole("switch")).toBeDisabled();
     });
 
     it("applies disabled styles", () => {
@@ -193,87 +115,46 @@ describe("ToggleSwitch", () => {
 
       expect(container.firstChild).toHaveClass("opacity-50", "cursor-not-allowed");
     });
-
-    it("is not focusable when disabled", () => {
-      render(<ToggleSwitch checked={false} onChange={() => {}} disabled />);
-
-      const switchEl = screen.getByRole("switch");
-      expect(switchEl).toHaveAttribute("tabIndex", "-1");
-    });
   });
 
   describe("sizes", () => {
     it("applies sm size classes", () => {
-      const { container } = render(
-        <ToggleSwitch checked={false} onChange={() => {}} size="sm" />
-      );
+      render(<ToggleSwitch checked={false} onChange={() => {}} size="sm" />);
 
-      const track = container.querySelector(".toggle-switch");
-      expect(track).toHaveClass("w-8", "h-4");
+      expect(screen.getByRole("switch")).toHaveClass("h-4", "w-7");
     });
 
     it("applies md size classes (default)", () => {
-      const { container } = render(
-        <ToggleSwitch checked={false} onChange={() => {}} />
-      );
+      render(<ToggleSwitch checked={false} onChange={() => {}} />);
 
-      const track = container.querySelector(".toggle-switch");
-      expect(track).toHaveClass("w-11", "h-6");
+      expect(screen.getByRole("switch")).toHaveClass("h-5", "w-9");
     });
 
     it("applies lg size classes", () => {
-      const { container } = render(
-        <ToggleSwitch checked={false} onChange={() => {}} size="lg" />
-      );
+      render(<ToggleSwitch checked={false} onChange={() => {}} size="lg" />);
 
-      const track = container.querySelector(".toggle-switch");
-      expect(track).toHaveClass("w-14", "h-7");
-    });
-  });
-
-  describe("thumb position", () => {
-    it("thumb is in off position when unchecked", () => {
-      const { container } = render(
-        <ToggleSwitch checked={false} onChange={() => {}} />
-      );
-
-      const thumb = container.querySelector(".toggle-switch-thumb");
-      expect(thumb).toHaveClass("translate-x-0.5");
-    });
-
-    it("thumb is in on position when checked", () => {
-      const { container } = render(
-        <ToggleSwitch checked={true} onChange={() => {}} />
-      );
-
-      const thumb = container.querySelector(".toggle-switch-thumb");
-      expect(thumb).toHaveClass("translate-x-5");
+      expect(screen.getByRole("switch")).toHaveClass("h-6", "w-11");
     });
   });
 
   describe("form integration", () => {
-    it("applies id to hidden checkbox", () => {
+    it("applies id to the switch", () => {
       render(
-        <ToggleSwitch
-          checked={false}
-          onChange={() => {}}
-          id="my-toggle"
-        />
+        <ToggleSwitch checked={false} onChange={() => {}} id="my-toggle" />
       );
 
-      expect(screen.getByRole("checkbox", { hidden: true })).toHaveAttribute("id", "my-toggle");
+      expect(screen.getByRole("switch")).toHaveAttribute("id", "my-toggle");
     });
 
-    it("applies name to hidden checkbox", () => {
-      render(
-        <ToggleSwitch
-          checked={false}
-          onChange={() => {}}
-          name="notifications"
-        />
+    it("applies name for form submission", () => {
+      // Radix Switch mirrors `name` onto a hidden bubble input inside a form.
+      const { container } = render(
+        <form>
+          <ToggleSwitch checked={true} onChange={() => {}} name="notifications" />
+        </form>
       );
 
-      expect(screen.getByRole("checkbox", { hidden: true })).toHaveAttribute("name", "notifications");
+      expect(container.querySelector('input[name="notifications"]')).toBeInTheDocument();
     });
   });
 
@@ -284,21 +165,7 @@ describe("ToggleSwitch", () => {
       expect(screen.getByRole("switch")).toBeInTheDocument();
     });
 
-    it("is focusable when enabled", () => {
-      render(<ToggleSwitch checked={false} onChange={() => {}} />);
-
-      const switchEl = screen.getByRole("switch");
-      expect(switchEl).toHaveAttribute("tabIndex", "0");
-    });
-
-    it("hidden checkbox has aria-checked", () => {
-      render(<ToggleSwitch checked={true} onChange={() => {}} />);
-
-      const checkbox = screen.getByRole("checkbox", { hidden: true });
-      expect(checkbox).toHaveAttribute("aria-checked", "true");
-    });
-
-    it("label is associated with toggle", () => {
+    it("label wraps the whole control", () => {
       const { container } = render(
         <ToggleSwitch
           checked={false}
@@ -307,7 +174,6 @@ describe("ToggleSwitch", () => {
         />
       );
 
-      // The whole thing is wrapped in a label element
       const label = container.querySelector("label");
       expect(label).toBeInTheDocument();
       expect(label).toHaveTextContent("Enable feature");
@@ -315,12 +181,12 @@ describe("ToggleSwitch", () => {
   });
 
   describe("ref forwarding", () => {
-    it("forwards ref to hidden checkbox", () => {
+    it("forwards ref to the switch button", () => {
       const ref = vi.fn();
       render(<ToggleSwitch checked={false} onChange={() => {}} ref={ref} />);
 
       expect(ref).toHaveBeenCalled();
-      expect(ref.mock.calls[0][0]).toBeInstanceOf(HTMLInputElement);
+      expect(ref.mock.calls[0][0]).toBeInstanceOf(HTMLButtonElement);
     });
   });
 });

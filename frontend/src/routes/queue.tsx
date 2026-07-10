@@ -1,20 +1,39 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import {
+  AlertCircle,
+  Ban,
+  Download,
+  ListMusic,
+  MoveRight,
+  RotateCcw,
+  X,
+} from "lucide-react";
 import {
   useQueueStore,
   type QueueItem,
   type DownloadStatus,
 } from "@/stores/queue";
-import {
-  Button,
-  Card,
-  CardContent,
-  Badge,
-} from "@/components/ui";
+import { Button } from "@/components/ui";
 import { CoverArt } from "@/components/ui/cover-art";
+import { Meter } from "@/components/ui/meter";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useDevConfig } from "@/contexts/DevConfigContext";
 import { useAuthStore } from "@/stores/auth";
+import { useSettingsStore } from "@/stores/settings";
 import { config } from "@/config";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/queue")({
   beforeLoad: () => {
@@ -38,346 +57,437 @@ export const Route = createFileRoute("/queue")({
 });
 
 // ============================================================================
-// SIMPLE PROGRESS BAR
+// STATUS MODEL
 // ============================================================================
 
-function ProgressBar({ progress, status }: { progress: number; status: DownloadStatus }) {
-  const isActive = ["searching", "downloading", "processing", "converting", "embedding"].includes(status);
-  const isComplete = status === "completed";
-  const isFailed = status === "failed";
+const IN_FLIGHT: DownloadStatus[] = [
+  "searching",
+  "downloading",
+  "processing",
+  "converting",
+  "embedding",
+];
 
-  let barColor = "bg-accent-needle";
-  if (isComplete) barColor = "bg-emerald-500";
-  if (isFailed) barColor = "bg-red-500";
+const ACTIVE_FILTER: DownloadStatus[] = ["pending", ...IN_FLIGHT];
 
-  return (
-    <div className="h-1 w-full bg-zinc-800 rounded-full overflow-hidden">
-      <div
-        className={`h-full ${barColor} transition-all duration-300 ${isActive ? "animate-pulse" : ""}`}
-        style={{ width: `${progress}%` }}
-      />
-    </div>
-  );
+/** Eyebrow label + token color per status (rule 3/12: sentence case, tokens only). */
+const STATUS_META: Record<DownloadStatus, { label: string; className: string }> = {
+  pending: { label: "Queued", className: "text-faint" },
+  searching: { label: "Searching", className: "text-warning" },
+  downloading: { label: "Downloading", className: "text-primary" },
+  processing: { label: "Processing", className: "text-info" },
+  converting: { label: "Converting", className: "text-info" },
+  embedding: { label: "Embedding", className: "text-info" },
+  completed: { label: "Completed", className: "text-success" },
+  failed: { label: "Failed", className: "text-destructive" },
+  cancelled: { label: "Cancelled", className: "text-muted-foreground" },
+};
+
+function isInFlight(status: DownloadStatus) {
+  return IN_FLIGHT.includes(status);
+}
+
+/** Meter appearance for a row — the only progress visualization (rule 4). */
+function meterFor(item: QueueItem): { value: number; active: boolean; color?: string } {
+  switch (item.status) {
+    case "completed":
+      return { value: 100, active: false, color: "var(--success)" };
+    case "failed":
+      return { value: item.progress, active: false, color: "var(--destructive)" };
+    case "cancelled":
+      return { value: item.progress, active: false, color: "var(--muted-foreground)" };
+    default:
+      return { value: item.progress, active: isInFlight(item.status) };
+  }
 }
 
 // ============================================================================
-// STATUS BADGE
+// CHANNEL ROW
 // ============================================================================
 
-function StatusBadge({ status }: { status: DownloadStatus }) {
-  const statusConfig: Record<DownloadStatus, { label: string; variant: "success" | "warning" | "error" | "info" | "muted" }> = {
-    pending: { label: "Pending", variant: "muted" },
-    searching: { label: "Searching", variant: "info" },
-    downloading: { label: "Downloading", variant: "info" },
-    processing: { label: "Processing", variant: "info" },
-    converting: { label: "Converting", variant: "info" },
-    embedding: { label: "Embedding", variant: "info" },
-    completed: { label: "Done", variant: "success" },
-    failed: { label: "Failed", variant: "error" },
-    cancelled: { label: "Cancelled", variant: "muted" },
-  };
-
-  const { label, variant } = statusConfig[status];
-
-  return <Badge variant={variant} size="sm">{label}</Badge>;
-}
-
-// ============================================================================
-// QUEUE ITEM ROW
-// ============================================================================
-
-function QueueItemRow({
+function ChannelRow({
   item,
+  canDownload,
+  reduceMotion,
+  onCancel,
   onRetry,
   onRemove,
+  onSave,
 }: {
   item: QueueItem;
+  canDownload: boolean;
+  reduceMotion: boolean;
+  onCancel: () => void;
   onRetry: () => void;
   onRemove: () => void;
+  onSave: () => void;
 }) {
-  const isActive = ["searching", "downloading", "processing", "converting", "embedding"].includes(item.status);
+  const status = STATUS_META[item.status];
+  const inFlight = isInFlight(item.status);
   const isFailed = item.status === "failed";
   const isCompleted = item.status === "completed";
+  const meter = meterFor(item);
+  const showStats = inFlight || isCompleted;
 
   return (
-    <div className={`group relative rounded-xl border transition-all ${
-      isActive
-        ? "bg-zinc-800/60 border-accent-needle/30"
-        : isFailed
-          ? "bg-red-950/20 border-red-500/20 hover:border-red-500/30"
-          : isCompleted
-            ? "bg-emerald-950/10 border-emerald-500/20 hover:border-emerald-500/30"
-            : "bg-zinc-900/50 border-zinc-800 hover:border-zinc-700"
-    }`}>
-      <div className="flex items-start gap-4 p-4">
-        {/* Cover Art */}
+    <motion.li
+      layout={!reduceMotion}
+      initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98 }}
+      transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+      className={cn(
+        "rounded-lg border border-border bg-card transition-colors",
+        "hover:border-faint/50",
+        inFlight && "border-primary/30",
+        isFailed && "border-l-2 border-l-destructive"
+      )}
+    >
+      <div className="flex items-center gap-4 p-3">
         <CoverArt
           src={item.song.cover_url ?? null}
           alt={item.song.name}
-          size="md"
+          size="sm"
           fallbackIcon="track"
-          className="shrink-0"
+          className="rounded-md"
         />
 
-        {/* Main Content */}
-        <div className="flex-1 min-w-0 space-y-2">
-          {/* Title Row */}
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <Link
-                  to="/song/$id"
-                  params={{ id: item.song.platform_id }}
-                  className="font-medium text-zinc-100 hover:text-accent-needle transition-colors truncate"
-                >
-                  {item.song.name}
-                </Link>
-                <StatusBadge status={item.status} />
-              </div>
-              <p className="text-sm text-zinc-400 truncate mt-0.5">
-                {item.song.artist}
-              </p>
-            </div>
+        {/* Identity */}
+        <div className="min-w-0 flex-1">
+          <p
+            className={cn(
+              "text-xs font-medium uppercase tracking-wider",
+              status.className
+            )}
+          >
+            {status.label}
+          </p>
+          <Link
+            to="/song/$id"
+            params={{ id: item.song.platform_id }}
+            className="block truncate font-medium text-foreground transition-colors hover:text-primary"
+          >
+            {item.song.name}
+          </Link>
+          <p className="truncate text-sm text-muted-foreground">{item.song.artist}</p>
 
-            {/* Actions - visible on hover */}
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-              {isFailed && (
-                <button
-                  onClick={onRetry}
-                  className="p-2 rounded-lg hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200 transition-colors"
-                  title="Retry"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                </button>
-              )}
-              <button
-                onClick={onRemove}
-                className="p-2 rounded-lg hover:bg-zinc-700 text-zinc-400 hover:text-red-400 transition-colors"
-                title="Remove"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          {/* Platform Info */}
-          <div className="flex items-center gap-2 text-xs">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-zinc-800/80 text-zinc-400">
-              <span className="uppercase tracking-wide">{item.song.platform}</span>
-              {item.match && (
-                <>
-                  <svg className="w-3 h-3 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </svg>
-                  <span className="uppercase tracking-wide">{item.match.target_platform}</span>
-                </>
-              )}
-            </span>
-          </div>
-
-          {/* Progress bar for active downloads */}
-          {isActive && (
-            <div className="flex items-center gap-3 pt-1">
-              <div className="flex-1">
-                <ProgressBar progress={item.progress} status={item.status} />
-              </div>
-              <span className="text-xs text-zinc-500 font-mono w-12 text-right">
-                {item.progress}%
+          {/* Source / target / entity context */}
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-xs uppercase tracking-wide text-faint">
+            <span>{item.song.platform}</span>
+            {item.match?.target_platform && (
+              <>
+                <MoveRight className="size-3" aria-hidden />
+                <span>{item.match.target_platform}</span>
+              </>
+            )}
+            {item.entityContext && (
+              <span className="truncate normal-case tracking-normal">
+                · {item.entityContext.name} ({item.entityContext.position}/
+                {item.entityContext.total})
               </span>
-              {item.speed && (
-                <span className="text-xs text-zinc-500">{item.speed}</span>
-              )}
-            </div>
-          )}
+            )}
+          </div>
+        </div>
 
-          {/* Error message */}
-          {isFailed && item.error && (
-            <div className="flex items-start gap-2 p-2.5 rounded-lg bg-red-950/30 border border-red-500/20">
-              <svg className="w-4 h-4 text-red-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-xs text-red-300 leading-relaxed">{item.error}</p>
-            </div>
+        {/* Meter (consistent width) */}
+        <div className="hidden w-28 shrink-0 sm:block md:w-36">
+          <Meter
+            cells={16}
+            value={meter.value}
+            max={100}
+            active={meter.active}
+            color={meter.color}
+            label={`${status.label} ${item.progress}%`}
+          />
+        </div>
+
+        {/* Mono readouts */}
+        <div className="hidden w-16 shrink-0 flex-col items-end gap-0.5 font-mono text-xs tnum sm:flex">
+          {showStats && <span className="text-foreground">{item.progress}%</span>}
+          {inFlight && item.speed && (
+            <span className="text-muted-foreground">{item.speed}</span>
           )}
+          {inFlight && item.eta && <span className="text-faint">{item.eta}</span>}
+        </div>
+
+        {/* Row actions */}
+        <div className="flex shrink-0 items-center gap-0.5">
+          {inFlight && (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={`Cancel download of ${item.song.name}`}
+              onClick={onCancel}
+            >
+              <Ban className="size-4" />
+            </Button>
+          )}
+          {isFailed && (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={`Retry ${item.song.name}`}
+              onClick={onRetry}
+            >
+              <RotateCcw className="size-4" />
+            </Button>
+          )}
+          {isCompleted && canDownload && (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={`Save ${item.song.name} to disk`}
+              onClick={onSave}
+            >
+              <Download className="size-4" />
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={`Remove ${item.song.name} from queue`}
+            onClick={onRemove}
+          >
+            <X className="size-4" />
+          </Button>
         </div>
       </div>
-    </div>
+
+      {/* Failure detail line */}
+      {isFailed && item.error && (
+        <div className="flex items-start gap-2 border-t border-border px-3 py-2 text-xs text-destructive">
+          <AlertCircle className="mt-px size-3.5 shrink-0" aria-hidden />
+          <span className="leading-relaxed">{item.error}</span>
+        </div>
+      )}
+    </motion.li>
   );
 }
 
 // ============================================================================
-// MAIN QUEUE PAGE
+// SUMMARY STRIP
+// ============================================================================
+
+type Filter = "all" | "active" | "completed" | "failed";
+
+function StatChip({
+  label,
+  count,
+  active,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "flex items-center gap-2 rounded-md border px-2.5 py-1.5 transition-colors",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        active
+          ? "border-primary/50 bg-elevated"
+          : "border-border bg-card hover:border-faint/60"
+      )}
+    >
+      <span className="font-mono text-sm font-semibold tnum text-foreground">{count}</span>
+      <span className="text-xs font-medium uppercase tracking-wider text-faint">{label}</span>
+    </button>
+  );
+}
+
+// ============================================================================
+// MAIN PAGE
 // ============================================================================
 
 function QueuePage() {
-  const {
-    items,
-    removeItem,
-    clearCompleted,
-    clearAll,
-    retryFailed,
-  } = useQueueStore();
+  const items = useQueueStore((s) => s.items);
+  const removeItem = useQueueStore((s) => s.removeItem);
+  const cancelDownload = useQueueStore((s) => s.cancelDownload);
+  const retryFailed = useQueueStore((s) => s.retryFailed);
+  const downloadFile = useQueueStore((s) => s.downloadFile);
+  const clearCompleted = useQueueStore((s) => s.clearCompleted);
+  const clearFailed = useQueueStore((s) => s.clearFailed);
+  const clearAll = useQueueStore((s) => s.clearAll);
 
   const { features } = useDevConfig();
+  const enableAnimations = useSettingsStore((s) => s.enableAnimations);
+  const reduceMotionSetting = useSettingsStore((s) => s.reduceMotion);
+  const prefersReduced = useReducedMotion();
+  const reduceMotion = !enableAnimations || reduceMotionSetting || Boolean(prefersReduced);
 
-  const [filter, setFilter] = useState<"all" | "active" | "completed" | "failed">("all");
+  const [filter, setFilter] = useState<Filter>("all");
 
-  // Filter items
+  const stats = useMemo(() => {
+    const count = (statuses: DownloadStatus[]) =>
+      items.filter((i) => statuses.includes(i.status)).length;
+    return {
+      total: items.length,
+      active: count(ACTIVE_FILTER),
+      completed: count(["completed"]),
+      failed: count(["failed", "cancelled"]),
+    };
+  }, [items]);
+
   const filteredItems = useMemo(() => {
     switch (filter) {
       case "active":
-        return items.filter((item) =>
-          ["pending", "searching", "downloading", "processing", "converting", "embedding"].includes(item.status)
-        );
+        return items.filter((i) => ACTIVE_FILTER.includes(i.status));
       case "completed":
-        return items.filter((item) => item.status === "completed");
+        return items.filter((i) => i.status === "completed");
       case "failed":
-        return items.filter((item) => item.status === "failed" || item.status === "cancelled");
+        return items.filter((i) => i.status === "failed" || i.status === "cancelled");
       default:
         return items;
     }
   }, [items, filter]);
 
-  // Stats
-  const stats = useMemo(() => {
-    const pending = items.filter((i) => i.status === "pending").length;
-    const active = items.filter((i) =>
-      ["searching", "downloading", "processing", "converting", "embedding"].includes(i.status)
-    ).length;
-    const completed = items.filter((i) => i.status === "completed").length;
-    const failed = items.filter((i) => i.status === "failed" || i.status === "cancelled").length;
-    return { pending, active, completed, failed, total: items.length };
-  }, [items]);
+  const toggleFilter = (next: Filter) =>
+    setFilter((current) => (current === next ? "all" : next));
 
-  // Overall progress
-  const overallProgress = useMemo(() => {
-    if (items.length === 0) return 0;
-    const total = items.reduce((acc, item) => acc + item.progress, 0);
-    return Math.round(total / items.length);
-  }, [items]);
+  const pageTransition = reduceMotion
+    ? undefined
+    : { duration: 0.3, ease: [0.16, 1, 0.3, 1] as const };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-zinc-100">Download Queue</h1>
-          <p className="text-sm text-zinc-500 mt-1">
-            {stats.total === 0
-              ? "No downloads"
-              : `${stats.total} ${stats.total === 1 ? "track" : "tracks"} in queue`}
-          </p>
-        </div>
-
+    <motion.div
+      initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={pageTransition}
+      className="space-y-6"
+    >
+      {/* Title */}
+      <div>
+        <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
+          Download queue
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {stats.total === 0
+            ? "Nothing queued yet"
+            : `${stats.total} ${stats.total === 1 ? "track" : "tracks"} on the console`}
+        </p>
       </div>
 
-      {/* Stats Bar */}
       {stats.total > 0 && (
-        <div className="flex items-center gap-6 text-sm">
-          <button
+        <div className="flex flex-wrap items-center gap-2">
+          <StatChip
+            label="All"
+            count={stats.total}
+            active={filter === "all"}
             onClick={() => setFilter("all")}
-            className={`transition-colors ${filter === "all" ? "text-zinc-100" : "text-zinc-500 hover:text-zinc-300"}`}
-          >
-            All ({stats.total})
-          </button>
-          <button
-            onClick={() => setFilter("active")}
-            className={`transition-colors ${filter === "active" ? "text-accent-needle" : "text-zinc-500 hover:text-zinc-300"}`}
-          >
-            Active ({stats.pending + stats.active})
-          </button>
-          <button
-            onClick={() => setFilter("completed")}
-            className={`transition-colors ${filter === "completed" ? "text-emerald-400" : "text-zinc-500 hover:text-zinc-300"}`}
-          >
-            Done ({stats.completed})
-          </button>
-          <button
-            onClick={() => setFilter("failed")}
-            className={`transition-colors ${filter === "failed" ? "text-red-400" : "text-zinc-500 hover:text-zinc-300"}`}
-          >
-            Failed ({stats.failed})
-          </button>
+          />
+          <StatChip
+            label="Active"
+            count={stats.active}
+            active={filter === "active"}
+            onClick={() => toggleFilter("active")}
+          />
+          <StatChip
+            label="Completed"
+            count={stats.completed}
+            active={filter === "completed"}
+            onClick={() => toggleFilter("completed")}
+          />
+          <StatChip
+            label="Failed"
+            count={stats.failed}
+            active={filter === "failed"}
+            onClick={() => toggleFilter("failed")}
+          />
 
-          <div className="flex-1" />
-
-          {/* Actions */}
-          {stats.completed > 0 && (
-            <Button variant="ghost" size="sm" onClick={clearCompleted}>
-              Clear done
-            </Button>
-          )}
-          {stats.total > 0 && (
-            <Button variant="ghost" size="sm" onClick={clearAll} className="text-zinc-500 hover:text-red-400">
-              Clear all
-            </Button>
-          )}
-        </div>
-      )}
-
-      {/* Overall Progress */}
-      {(stats.active > 0 || stats.pending > 0) && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-zinc-400">Overall progress</span>
-            <span className="text-zinc-300 font-medium">{overallProgress}%</span>
-          </div>
-          <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-accent-needle transition-all duration-300"
-              style={{ width: `${overallProgress}%` }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Queue List */}
-      {filteredItems.length > 0 ? (
-        <div className="space-y-3">
-          {filteredItems.map((item) => (
-            <QueueItemRow
-              key={item.id}
-              item={item}
-              onRetry={() => retryFailed(item.id)}
-              onRemove={() => removeItem(item.id)}
-            />
-          ))}
-        </div>
-      ) : (
-        <Card variant="bordered">
-          <CardContent className="py-16 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-800 flex items-center justify-center">
-              <svg className="w-8 h-8 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-zinc-300 mb-2">
-              {filter === "all" ? "Queue is empty" : `No ${filter} downloads`}
-            </h3>
-            <p className="text-zinc-500 mb-4">
-              {filter === "all"
-                ? "Search for songs and add them to your queue"
-                : "Try a different filter"}
-            </p>
-            {filter === "all" && (
-              <Link to="/search">
-                <Button variant="primary">Search Music</Button>
-              </Link>
+          <div className="ml-auto flex items-center gap-1">
+            {stats.completed > 0 && (
+              <Button variant="ghost" size="sm" onClick={clearCompleted}>
+                Clear completed
+              </Button>
             )}
-          </CardContent>
-        </Card>
+            {stats.failed > 0 && (
+              <Button variant="ghost" size="sm" onClick={clearFailed}>
+                Clear failed
+              </Button>
+            )}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  Clear all
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Clear the entire queue?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This removes all {stats.total}{" "}
+                    {stats.total === 1 ? "track" : "tracks"}, including any active
+                    downloads. This cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel asChild>
+                    <Button variant="outline">Cancel</Button>
+                  </AlertDialogCancel>
+                  <AlertDialogAction asChild>
+                    <Button variant="danger" onClick={clearAll}>
+                      Clear all
+                    </Button>
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
       )}
 
-      {/* Download location notice */}
+      {/* Channel list */}
+      {filteredItems.length > 0 ? (
+        <ul className="space-y-2">
+          <AnimatePresence initial={false}>
+            {filteredItems.map((item) => (
+              <ChannelRow
+                key={item.id}
+                item={item}
+                canDownload={features.canDownload}
+                reduceMotion={reduceMotion}
+                onCancel={() => cancelDownload(item.id)}
+                onRetry={() => retryFailed(item.id)}
+                onRemove={() => removeItem(item.id)}
+                onSave={() => downloadFile(item.id)}
+              />
+            ))}
+          </AnimatePresence>
+        </ul>
+      ) : (
+        <div className="flex flex-col items-center py-16 text-center">
+          <ListMusic className="size-8 text-faint" aria-hidden />
+          <h2 className="mt-4 font-display text-lg font-semibold tracking-tight text-foreground">
+            {filter === "all" ? "Queue is empty" : `No ${filter} downloads`}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {filter === "all"
+              ? "Find music and add it to start downloading."
+              : "Nothing here right now."}
+          </p>
+          {filter === "all" ? (
+            <Button asChild variant="primary" className="mt-4">
+              <Link to="/search">Find music</Link>
+            </Button>
+          ) : (
+            <Button variant="outline" className="mt-4" onClick={() => setFilter("all")}>
+              Show all
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Output notice */}
       {features.canDownload && stats.completed > 0 && (
-        <p className="text-xs text-zinc-500 text-center">
-          Downloads saved to your configured output directory
+        <p className="text-center text-xs text-faint">
+          Completed downloads are saved to your configured output directory.
         </p>
       )}
-    </div>
+    </motion.div>
   );
 }

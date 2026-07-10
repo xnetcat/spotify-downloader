@@ -1,4 +1,4 @@
-"""MatchBar — Match display widget for track screen."""
+"""MatchBar — match row with a score-colored segmented meter."""
 
 from __future__ import annotations
 
@@ -8,18 +8,18 @@ from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Static
 
-from spotdl_cli.theme import Theme, get_platform_icon
+from spotdl_cli.theme import get_platform_icon, score_color, segmented_meter
+
+METER_WIDTH = 16
 
 
-def _score_bar(score: float, width: int = 20) -> str:
-    """Build a Unicode block bar for a score (0-100)."""
-    filled = int((score / 100) * width)
-    blocks = "█" * filled + "░" * (width - filled)
-    return blocks
+def _score_meter(score: float) -> str:
+    """Segmented meter markup for a 0-100 score, colored by quality band."""
+    return segmented_meter(score / 100, width=METER_WIDTH, lit_color=score_color(score))
 
 
 class MatchBar(Widget, can_focus=True):
-    """Single row: platform dot, title, score bar, vote count."""
+    """Single row: platform dot, title, segmented score meter, vote count."""
 
     DEFAULT_CSS = """
     MatchBar {
@@ -28,26 +28,25 @@ class MatchBar(Widget, can_focus=True):
         padding: 0 1;
     }
     MatchBar:hover {
-        background: #2c2e32;
+        background: #262d3a;
     }
     MatchBar:focus {
-        background: #2c2e32;
-        border-left: thick #e8764b;
+        background: #262d3a;
+        border-left: thick #f5a623;
     }
     MatchBar .mb-platform {
         width: 3;
     }
     MatchBar .mb-title {
         width: 1fr;
-        color: #fafafa;
+        color: #e8eaf0;
     }
     MatchBar .mb-score {
         width: 24;
-        color: #e8764b;
     }
     MatchBar .mb-votes {
         width: 8;
-        color: #6b6b76;
+        color: #5a6274;
         text-align: right;
     }
     """
@@ -75,11 +74,11 @@ class MatchBar(Widget, can_focus=True):
 
     def compose(self) -> ComposeResult:
         icon = get_platform_icon(self._platform)
-        bar = _score_bar(self._score)
+        meter = _score_meter(self._score)
         with Horizontal():
             yield Static(icon, classes="mb-platform")
             yield Static(self._title[:35], classes="mb-title")
-            yield Static(f"{bar} {self._score:.0f}%", classes="mb-score")
+            yield Static(f"{meter} {self._score:.0f}%", classes="mb-score", markup=True)
             yield Static(
                 f"{'↑' if self._votes > 0 else ''}{self._votes}" if self._votes else "",
                 classes="mb-votes",

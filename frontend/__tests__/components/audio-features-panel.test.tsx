@@ -69,13 +69,11 @@ describe("AudioFeaturesPanel", () => {
     it("renders compact feature bars", () => {
       render(<AudioFeaturesPanel features={mockFeatures} variant="compact" />);
 
-      // Compact only shows 4 features
       expect(screen.getByText("Energy")).toBeInTheDocument();
       expect(screen.getByText("Danceability")).toBeInTheDocument();
       expect(screen.getByText("Valence")).toBeInTheDocument();
       expect(screen.getByText("Acousticness")).toBeInTheDocument();
 
-      // Should not show these in compact
       expect(screen.queryByText("Speechiness")).not.toBeInTheDocument();
       expect(screen.queryByText("Liveness")).not.toBeInTheDocument();
     });
@@ -105,7 +103,6 @@ describe("AudioFeaturesPanel", () => {
     it("shows tempo visualizer in full variant", () => {
       render(<AudioFeaturesPanel features={mockFeatures} variant="full" />);
 
-      // Full variant shows BPM label
       expect(screen.getByText("BPM")).toBeInTheDocument();
       expect(screen.getByText("120")).toBeInTheDocument();
     });
@@ -118,7 +115,7 @@ describe("AudioFeaturesPanel", () => {
       );
 
       // Key 5 with mode 1 (major) = F Major
-      const keyBadge = container.querySelector(".key-signature-badge, [title*='Key']");
+      const keyBadge = container.querySelector("[title*='Key']");
       expect(keyBadge || screen.queryByText(/F/)).toBeTruthy();
     });
   });
@@ -141,23 +138,19 @@ describe("AudioFeaturesPanel", () => {
     it("shows loudness in full variant", () => {
       render(<AudioFeaturesPanel features={mockFeatures} variant="full" />);
 
-      // Loudness is rounded: -5.5 -> -5 or -6
       expect(screen.getByText("dB", { exact: false })).toBeInTheDocument();
     });
 
     it("does not show loudness in compact variant", () => {
-      const { container } = render(<AudioFeaturesPanel features={mockFeatures} variant="compact" />);
+      render(<AudioFeaturesPanel features={mockFeatures} variant="compact" />);
 
-      // In compact mode, the loudness element should not be present
-      const loudnessElements = container.querySelectorAll("[title='Average Loudness (dB)']");
-      expect(loudnessElements.length).toBe(0);
+      expect(screen.queryByText("dB", { exact: false })).not.toBeInTheDocument();
     });
 
     it("handles null loudness", () => {
-      const { container } = render(<AudioFeaturesPanel features={nullFeatures} variant="full" />);
+      render(<AudioFeaturesPanel features={nullFeatures} variant="full" />);
 
-      const loudnessElements = container.querySelectorAll("[title='Average Loudness (dB)']");
-      expect(loudnessElements.length).toBe(0);
+      expect(screen.queryByText("dB", { exact: false })).not.toBeInTheDocument();
     });
   });
 
@@ -174,19 +167,18 @@ describe("AudioFeaturesPanel", () => {
     it("handles null values with dashes", () => {
       render(<AudioFeaturesPanel features={partialFeatures} />);
 
-      // Some values should show as "--"
       const dashes = screen.getAllByText("--");
       expect(dashes.length).toBeGreaterThan(0);
     });
 
-    it("applies color based on intensity", () => {
+    it("renders a segmented meter for each feature", () => {
       const { container } = render(
         <AudioFeaturesPanel features={mockFeatures} />
       );
 
-      // High values (>66%) should have different colors than low values (<33%)
-      const bars = container.querySelectorAll(".h-1\\.5 > div");
-      expect(bars.length).toBeGreaterThan(0);
+      const meters = container.querySelectorAll('[role="meter"]');
+      expect(meters.length).toBeGreaterThan(0);
+      expect(container.querySelectorAll(".meter-cell").length).toBeGreaterThan(0);
     });
   });
 
@@ -196,7 +188,6 @@ describe("AudioFeaturesPanel", () => {
         <AudioFeaturesPanel features={mockFeatures} />
       );
 
-      // Features should have group elements with titles
       const groups = container.querySelectorAll(".group[title]");
       expect(groups.length).toBeGreaterThan(0);
     });
@@ -217,8 +208,7 @@ describe("AudioFeaturesSummary", () => {
         <AudioFeaturesSummary features={mockFeatures} />
       );
 
-      // Should have KeySignatureBadge
-      const keyBadge = container.querySelector(".key-signature-badge, [title*='Key']");
+      const keyBadge = container.querySelector("[title*='Key']");
       expect(keyBadge || screen.queryByText(/F/)).toBeTruthy();
     });
 
@@ -249,14 +239,12 @@ describe("AudioFeaturesSummary", () => {
     it("hides key when null", () => {
       render(<AudioFeaturesSummary features={nullFeatures} />);
 
-      // No key badge should be shown
       expect(screen.queryByText(/major|minor/i)).not.toBeInTheDocument();
     });
 
     it("filters out null feature highlights", () => {
       render(<AudioFeaturesSummary features={partialFeatures} />);
 
-      // Energy (0.5) and Valence (0.3) should show, Danceability is null
       expect(screen.getByText("Energy:")).toBeInTheDocument();
       expect(screen.getByText("Valence:")).toBeInTheDocument();
       expect(screen.queryByText("Danceability:")).not.toBeInTheDocument();
@@ -278,22 +266,20 @@ describe("SingleFeature", () => {
       expect(screen.getByText("80%")).toBeInTheDocument();
     });
 
-    it("shows progress bar by default", () => {
+    it("shows meter by default", () => {
       const { container } = render(
         <SingleFeature label="Energy" value={0.8} />
       );
 
-      const bar = container.querySelector(".h-1");
-      expect(bar).toBeInTheDocument();
+      expect(container.querySelector(".meter")).toBeInTheDocument();
     });
 
-    it("hides progress bar when showBar is false", () => {
+    it("hides meter when showBar is false", () => {
       const { container } = render(
         <SingleFeature label="Energy" value={0.8} showBar={false} />
       );
 
-      const bar = container.querySelector(".h-1");
-      expect(bar).not.toBeInTheDocument();
+      expect(container.querySelector(".meter")).not.toBeInTheDocument();
     });
 
     it("applies custom className", () => {
@@ -312,42 +298,33 @@ describe("SingleFeature", () => {
       expect(screen.getByText("--")).toBeInTheDocument();
     });
 
-    it("shows 0% width bar for null value", () => {
+    it("renders an empty meter for null value", () => {
       const { container } = render(
         <SingleFeature label="Energy" value={null} />
       );
 
-      const fill = container.querySelector(".h-full.rounded-full");
-      expect(fill).toHaveStyle({ width: "0%" });
+      const meter = container.querySelector('[role="meter"]');
+      expect(meter).toHaveAttribute("aria-valuenow", "0");
     });
   });
 
   describe("color intensity", () => {
-    it("uses cool color for low values (<=33%)", () => {
-      const { container } = render(
-        <SingleFeature label="Feature" value={0.2} />
-      );
+    it("uses info color for low values (<=33%)", () => {
+      render(<SingleFeature label="Feature" value={0.2} />);
 
-      const fill = container.querySelector(".h-full.rounded-full");
-      expect(fill).toHaveStyle({ backgroundColor: "var(--accent-cool)" });
+      expect(screen.getByText("20%").style.color).toBe("var(--info)");
     });
 
-    it("uses warm color for medium values (34-66%)", () => {
-      const { container } = render(
-        <SingleFeature label="Feature" value={0.5} />
-      );
+    it("uses warning color for medium values (34-66%)", () => {
+      render(<SingleFeature label="Feature" value={0.5} />);
 
-      const fill = container.querySelector(".h-full.rounded-full");
-      expect(fill).toHaveStyle({ backgroundColor: "var(--accent-warm)" });
+      expect(screen.getByText("50%").style.color).toBe("var(--warning)");
     });
 
-    it("uses needle color for high values (>66%)", () => {
-      const { container } = render(
-        <SingleFeature label="Feature" value={0.8} />
-      );
+    it("uses primary color for high values (>66%)", () => {
+      render(<SingleFeature label="Feature" value={0.8} />);
 
-      const fill = container.querySelector(".h-full.rounded-full");
-      expect(fill).toHaveStyle({ backgroundColor: "var(--accent-needle)" });
+      expect(screen.getByText("80%").style.color).toBe("var(--primary)");
     });
   });
 

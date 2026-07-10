@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 interface SubmitLyricsModalProps {
   isOpen: boolean;
@@ -8,6 +11,12 @@ interface SubmitLyricsModalProps {
   onSubmit: (data: { source: string; lyricsText: string; lyricsSynced?: string | null }) => void;
   isSubmitting: boolean;
 }
+
+const inputClass = cn(
+  "h-9 w-full rounded-md border border-input bg-surface px-3 text-sm text-foreground",
+  "placeholder:text-faint outline-none transition-colors",
+  "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
+);
 
 export function SubmitLyricsModal({
   isOpen,
@@ -40,7 +49,7 @@ export function SubmitLyricsModal({
         disabled={isSubmitting || !lyricsText.trim()}
         onClick={handleSubmit}
       >
-        {isSubmitting ? "Submitting..." : "Submit Lyrics"}
+        {isSubmitting ? "Submitting…" : "Submit lyrics"}
       </Button>
     </>
   );
@@ -49,46 +58,48 @@ export function SubmitLyricsModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Submit Lyrics"
+      title="Submit lyrics"
       description="Add lyrics from another source or provide your own translation."
       size="lg"
       footer={footer}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <label htmlFor="source" className="text-sm font-medium">Source / Provider Name</label>
+        <div className="space-y-1.5">
+          <Label htmlFor="source">Source / provider name</Label>
           <input
             id="source"
             type="text"
             value={source}
             onChange={(e) => setSource(e.target.value)}
-            placeholder="e.g. My Translation, AnimeLyrics, etc."
-            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg focus:outline-none focus:border-accent-cool text-sm"
+            placeholder="e.g. my translation, AnimeLyrics"
+            className={inputClass}
             required
           />
         </div>
 
-        <div className="space-y-2">
-          <label htmlFor="lyricsText" className="text-sm font-medium">Plain Text Lyrics *</label>
-          <textarea
+        <div className="space-y-1.5">
+          <Label htmlFor="lyricsText">Plain text lyrics</Label>
+          <Textarea
             id="lyricsText"
             value={lyricsText}
             onChange={(e) => setLyricsText(e.target.value)}
-            placeholder="Paste the plain text lyrics here..."
-            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg focus:outline-none focus:border-accent-cool text-sm font-mono whitespace-pre resize-y"
+            placeholder="Paste the plain text lyrics here"
+            className="min-h-40 font-mono whitespace-pre"
             rows={8}
             required
           />
         </div>
 
-        <div className="space-y-2">
-          <label htmlFor="lyricsSynced" className="text-sm font-medium">Synced Lyrics (LRC) (Optional)</label>
-          <textarea
+        <div className="space-y-1.5">
+          <Label htmlFor="lyricsSynced">
+            Synced lyrics (LRC) <span className="text-faint">(optional)</span>
+          </Label>
+          <Textarea
             id="lyricsSynced"
             value={lyricsSynced}
             onChange={(e) => setLyricsSynced(e.target.value)}
-            placeholder="[00:12.34] Example synced lyric verse..."
-            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg focus:outline-none focus:border-accent-cool text-sm font-mono whitespace-pre resize-y"
+            placeholder="[00:12.34] Example synced lyric verse"
+            className="min-h-32 font-mono whitespace-pre"
             rows={6}
           />
         </div>

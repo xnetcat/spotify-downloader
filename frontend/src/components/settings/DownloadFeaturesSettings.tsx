@@ -1,12 +1,6 @@
 import { useSettingsStore } from "@/stores/settings";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  Input,
-  ToggleSwitch,
-} from "@/components/ui";
-import { SectionHeader } from "./SectionHeader";
+import { Input, Switch } from "@/components/ui";
+import { SettingsSection, SettingRow } from "./SettingsSection";
 import { useSettingsContext } from "./SettingsContext";
 
 export function DownloadFeaturesSettings() {
@@ -23,80 +17,63 @@ export function DownloadFeaturesSettings() {
   const { changeSetting, changeInput } = useSettingsContext();
 
   return (
-    <Card variant="bordered" className="animate-slide-up stagger-1">
-      <CardHeader>
-        <SectionHeader
-          icon={
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 10V3L4 14h7v7l9-11h-7z"
-              />
-            </svg>
-          }
-          iconBg="bg-gradient-to-br from-amber-500/20 to-orange-500/20"
-          iconColor="text-amber-400"
-          title="Download Features"
-          description="SponsorBlock, playlists, content filtering, and more"
-        />
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <ToggleSwitch
+    <SettingsSection
+      id="features"
+      title="Features"
+      description="SponsorBlock, playlists, and content filtering."
+    >
+      <SettingRow label="SponsorBlock" help="Remove sponsor segments from YouTube audio.">
+        <Switch
           checked={sponsorBlock}
-          onChange={(val) => changeSetting("sponsorBlock", val, "SponsorBlock")}
-          label="SponsorBlock"
-          description="Remove sponsor segments from YouTube audio"
+          onCheckedChange={(val) => changeSetting("sponsorBlock", val, "SponsorBlock")}
         />
+      </SettingRow>
 
-        <ToggleSwitch
+      <SettingRow label="Skip explicit tracks" help="Filter out explicit content from downloads.">
+        <Switch
           checked={skipExplicit}
-          onChange={(val) => changeSetting("skipExplicit", val, "Skip explicit tracks")}
-          label="Skip explicit tracks"
-          description="Filter out explicit content from downloads"
+          onCheckedChange={(val) => changeSetting("skipExplicit", val, "Skip explicit tracks")}
         />
+      </SettingRow>
 
-        <ToggleSwitch
+      <SettingRow label="Scan for existing songs" help="Check local files by metadata to avoid duplicates.">
+        <Switch
           checked={scanForSongs}
-          onChange={(val) => changeSetting("scanForSongs", val, "Scan for existing songs")}
-          label="Scan for existing songs"
-          description="Check local files by metadata to avoid duplicates"
+          onCheckedChange={(val) => changeSetting("scanForSongs", val, "Scan for existing songs")}
         />
+      </SettingRow>
 
-        <ToggleSwitch
+      <SettingRow label="Playlist numbering" help="Prepend track numbers to playlist filenames.">
+        <Switch
           checked={playlistNumbering}
-          onChange={(val) => changeSetting("playlistNumbering", val, "Playlist numbering")}
-          label="Playlist numbering"
-          description="Prepend track numbers to filenames in playlists"
+          onCheckedChange={(val) => changeSetting("playlistNumbering", val, "Playlist numbering")}
         />
+      </SettingRow>
 
-        <ToggleSwitch
+      <SettingRow label="Fetch full albums for artists" help="Download all album tracks when downloading an artist.">
+        <Switch
           checked={fetchAlbums}
-          onChange={(val) => changeSetting("fetchAlbums", val, "Fetch full albums")}
-          label="Fetch full albums for artists"
-          description="Download all album tracks when downloading an artist"
+          onCheckedChange={(val) => changeSetting("fetchAlbums", val, "Fetch full albums")}
         />
+      </SettingRow>
 
+      <SettingRow label="M3U playlist file" help="Template for a generated playlist file.">
         <Input
-          label="M3U Playlist File"
           value={m3u}
           onChange={changeInput("m3u", "M3U template")}
-          placeholder="e.g. {list}.m3u8"
+          placeholder="{list}.m3u8"
+          className="w-full sm:w-64"
         />
+      </SettingRow>
 
+      <SettingRow label="Archive file" help="Track downloads to skip on re-runs.">
         <Input
-          label="Archive File"
           value={archive}
           onChange={changeInput("archive", "Archive file")}
-          placeholder="Path to archive file for tracking downloads"
+          placeholder="Path to archive file"
+          className="w-full sm:w-64"
         />
-      </CardContent>
-    </Card>
+      </SettingRow>
+    </SettingsSection>
   );
 }

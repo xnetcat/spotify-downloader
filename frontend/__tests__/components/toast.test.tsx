@@ -1,13 +1,20 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { ToastProvider, useToast } from "../../src/components/ui/toast";
+import { toast as sonnerToast } from "../../src/components/ui/sonner";
 
-// Mock createPortal to render in the same container
-vi.mock("react-dom", async () => {
-  const actual = await vi.importActual("react-dom");
+// The Control Room toast is a thin shim over sonner. `toast.tsx` imports
+// `toast` from `./sonner`, so we mock that module and assert delegation.
+vi.mock("../../src/components/ui/sonner", () => {
+  let counter = 0;
   return {
-    ...actual,
-    createPortal: (node: React.ReactNode) => node,
+    toast: {
+      success: vi.fn(() => `id-${++counter}`),
+      error: vi.fn(() => `id-${++counter}`),
+      warning: vi.fn(() => `id-${++counter}`),
+      info: vi.fn(() => `id-${++counter}`),
+      dismiss: vi.fn(),
+    },
   };
 });
 
@@ -17,56 +24,37 @@ function TestComponent() {
 
   return (
     <div>
-      <button onClick={() => toast.success("Success message")}>
-        Show Success
-      </button>
-      <button onClick={() => toast.error("Error message")}>
-        Show Error
-      </button>
-      <button onClick={() => toast.warning("Warning message")}>
-        Show Warning
-      </button>
-      <button onClick={() => toast.info("Info message")}>
-        Show Info
-      </button>
-      <button onClick={() => toast.addToast("Custom", "success", 10000)}>
-        Custom Toast
-      </button>
+      <button onClick={() => toast.success("Success message")}>Show Success</button>
+      <button onClick={() => toast.error("Error message")}>Show Error</button>
+      <button onClick={() => toast.warning("Warning message")}>Show Warning</button>
+      <button onClick={() => toast.info("Info message")}>Show Info</button>
+      <button onClick={() => toast.addToast("Custom", "success", 10000)}>Custom Toast</button>
     </div>
   );
 }
 
 function renderWithProvider(ui?: React.ReactNode) {
-  return render(
-    <ToastProvider>
-      {ui || <TestComponent />}
-    </ToastProvider>
-  );
+  return render(<ToastProvider>{ui || <TestComponent />}</ToastProvider>);
 }
 
 describe("Toast", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
+    vi.clearAllMocks();
   });
 
   describe("useToast hook", () => {
-    it("throws error when used outside ToastProvider", () => {
-      // Suppress console error for this test
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    it("works without a provider and returns the expected shape", () => {
+      let toastContext: ReturnType<typeof useToast> | null = null;
 
-      expect(() => {
-        const TestOutside = () => {
-          useToast();
-          return null;
-        };
-        render(<TestOutside />);
-      }).toThrow("useToast must be used within a ToastProvider");
+      function TestOutside() {
+        toastContext = useToast();
+        return null;
+      }
 
-      consoleSpy.mockRestore();
+      // No provider — must not throw (sonner-backed shim).
+      expect(() => render(<TestOutside />)).not.toThrow();
+      expect(toastContext).not.toBeNull();
+      expect(toastContext!.toasts).toEqual([]);
     });
 
     it("provides toast methods", () => {
@@ -89,299 +77,74 @@ describe("Toast", () => {
     });
   });
 
-  describe("toast variants", () => {
-    it("shows success toast", async () => {
+  describe("delegation to sonner", () => {
+    it("delegates success toasts", () => {
       renderWithProvider();
 
       fireEvent.click(screen.getByText("Show Success"));
 
-      expect(screen.getByText("Success message")).toBeInTheDocument();
-      expect(screen.getByRole("alert")).toHaveClass("border-l-[var(--accent-safe)]");
+      expect(sonnerToast.success).toHaveBeenCalledWith("Success message", undefined);
     });
 
-    it("shows error toast", async () => {
+    it("delegates error toasts", () => {
       renderWithProvider();
 
       fireEvent.click(screen.getByText("Show Error"));
 
-      expect(screen.getByText("Error message")).toBeInTheDocument();
-      expect(screen.getByRole("alert")).toHaveClass("border-l-[var(--accent-peak)]");
+      expect(sonnerToast.error).toHaveBeenCalledWith("Error message", undefined);
     });
 
-    it("shows warning toast", async () => {
+    it("delegates warning toasts", () => {
       renderWithProvider();
 
       fireEvent.click(screen.getByText("Show Warning"));
 
-      expect(screen.getByText("Warning message")).toBeInTheDocument();
-      expect(screen.getByRole("alert")).toHaveClass("border-l-[var(--accent-warm)]");
+      expect(sonnerToast.warning).toHaveBeenCalledWith("Warning message", undefined);
     });
 
-    it("shows info toast", async () => {
+    it("delegates info toasts", () => {
       renderWithProvider();
 
       fireEvent.click(screen.getByText("Show Info"));
 
-      expect(screen.getByText("Info message")).toBeInTheDocument();
-      expect(screen.getByRole("alert")).toHaveClass("border-l-[var(--accent-cool)]");
-    });
-  });
-
-  describe("toast icons", () => {
-    it("shows success icon", () => {
-      renderWithProvider();
-      fireEvent.click(screen.getByText("Show Success"));
-
-      const toast = screen.getByRole("alert");
-      const icon = toast.querySelector("svg");
-      expect(icon).toBeInTheDocument();
+      expect(sonnerToast.info).toHaveBeenCalledWith("Info message", undefined);
     });
 
-    it("shows error icon", () => {
-      renderWithProvider();
-      fireEvent.click(screen.getByText("Show Error"));
-
-      const toast = screen.getByRole("alert");
-      const icon = toast.querySelector("svg");
-      expect(icon).toBeInTheDocument();
-    });
-
-    it("shows warning icon", () => {
-      renderWithProvider();
-      fireEvent.click(screen.getByText("Show Warning"));
-
-      const toast = screen.getByRole("alert");
-      const icon = toast.querySelector("svg");
-      expect(icon).toBeInTheDocument();
-    });
-
-    it("shows info icon", () => {
-      renderWithProvider();
-      fireEvent.click(screen.getByText("Show Info"));
-
-      const toast = screen.getByRole("alert");
-      const icon = toast.querySelector("svg");
-      expect(icon).toBeInTheDocument();
-    });
-  });
-
-  describe("auto-dismiss", () => {
-    it("auto-dismisses after default duration (5000ms)", async () => {
-      renderWithProvider();
-
-      fireEvent.click(screen.getByText("Show Success"));
-      expect(screen.getByText("Success message")).toBeInTheDocument();
-
-      // Advance past duration
-      act(() => {
-        vi.advanceTimersByTime(5000);
-      });
-
-      // Wait for exit animation (300ms)
-      act(() => {
-        vi.advanceTimersByTime(300);
-      });
-
-      expect(screen.queryByText("Success message")).not.toBeInTheDocument();
-    });
-
-    it("uses custom duration when provided", async () => {
+    it("passes duration through addToast", () => {
       renderWithProvider();
 
       fireEvent.click(screen.getByText("Custom Toast"));
-      expect(screen.getByText("Custom")).toBeInTheDocument();
 
-      // Should still be visible at 5000ms
-      act(() => {
-        vi.advanceTimersByTime(5000);
-      });
-      expect(screen.getByText("Custom")).toBeInTheDocument();
-
-      // Should dismiss after 10000ms + exit animation
-      act(() => {
-        vi.advanceTimersByTime(5000);
-      });
-      act(() => {
-        vi.advanceTimersByTime(300);
-      });
-
-      expect(screen.queryByText("Custom")).not.toBeInTheDocument();
-    });
-
-    it("does not auto-dismiss when duration is 0", async () => {
-      function TestPermanent() {
-        const toast = useToast();
-        return (
-          <button onClick={() => toast.addToast("Permanent", "info", 0)}>
-            Show Permanent
-          </button>
-        );
-      }
-
-      renderWithProvider(<TestPermanent />);
-
-      fireEvent.click(screen.getByText("Show Permanent"));
-      expect(screen.getByText("Permanent")).toBeInTheDocument();
-
-      // Advance a long time
-      act(() => {
-        vi.advanceTimersByTime(60000);
-      });
-
-      // Should still be visible
-      expect(screen.getByText("Permanent")).toBeInTheDocument();
+      expect(sonnerToast.success).toHaveBeenCalledWith("Custom", { duration: 10000 });
     });
   });
 
-  describe("manual dismiss", () => {
-    it("dismisses when clicking dismiss button", async () => {
-      renderWithProvider();
-
-      fireEvent.click(screen.getByText("Show Success"));
-      expect(screen.getByText("Success message")).toBeInTheDocument();
-
-      const dismissButton = screen.getByLabelText("Dismiss notification");
-      fireEvent.click(dismissButton);
-
-      // Wait for exit animation
-      act(() => {
-        vi.advanceTimersByTime(300);
-      });
-
-      expect(screen.queryByText("Success message")).not.toBeInTheDocument();
-    });
-
-    it("dismisses using removeToast", async () => {
-      let toastId = "";
+  describe("removeToast", () => {
+    it("delegates dismissal to sonner", () => {
+      let toastContext: ReturnType<typeof useToast> | null = null;
 
       function TestRemove() {
-        const toast = useToast();
-        return (
-          <div>
-            <button
-              onClick={() => {
-                toastId = toast.success("To be removed");
-              }}
-            >
-              Show
-            </button>
-            <button onClick={() => toast.removeToast(toastId)}>Remove</button>
-          </div>
-        );
+        toastContext = useToast();
+        return null;
       }
 
       renderWithProvider(<TestRemove />);
+      toastContext!.removeToast("some-id");
 
-      fireEvent.click(screen.getByText("Show"));
-      expect(screen.getByText("To be removed")).toBeInTheDocument();
-
-      fireEvent.click(screen.getByText("Remove"));
-
-      expect(screen.queryByText("To be removed")).not.toBeInTheDocument();
-    });
-  });
-
-  describe("multiple toasts", () => {
-    it("can show multiple toasts", () => {
-      renderWithProvider();
-
-      fireEvent.click(screen.getByText("Show Success"));
-      fireEvent.click(screen.getByText("Show Error"));
-      fireEvent.click(screen.getByText("Show Info"));
-
-      expect(screen.getByText("Success message")).toBeInTheDocument();
-      expect(screen.getByText("Error message")).toBeInTheDocument();
-      expect(screen.getByText("Info message")).toBeInTheDocument();
-    });
-
-    it("dismisses toasts independently", async () => {
-      renderWithProvider();
-
-      fireEvent.click(screen.getByText("Show Success"));
-      fireEvent.click(screen.getByText("Show Error"));
-
-      // Dismiss only the first toast
-      const dismissButtons = screen.getAllByLabelText("Dismiss notification");
-      fireEvent.click(dismissButtons[0]);
-
-      act(() => {
-        vi.advanceTimersByTime(300);
-      });
-
-      // One toast removed, one remains
-      expect(screen.queryByText("Success message")).not.toBeInTheDocument();
-      expect(screen.getByText("Error message")).toBeInTheDocument();
-    });
-  });
-
-  describe("accessibility", () => {
-    it("has role alert", () => {
-      renderWithProvider();
-
-      fireEvent.click(screen.getByText("Show Success"));
-
-      expect(screen.getByRole("alert")).toBeInTheDocument();
-    });
-
-    it("dismiss button has aria-label", () => {
-      renderWithProvider();
-
-      fireEvent.click(screen.getByText("Show Success"));
-
-      expect(screen.getByLabelText("Dismiss notification")).toBeInTheDocument();
-    });
-  });
-
-  describe("animations", () => {
-    it("applies slide-in animation on show", () => {
-      renderWithProvider();
-
-      fireEvent.click(screen.getByText("Show Success"));
-
-      expect(screen.getByRole("alert")).toHaveClass("animate-slide-left");
-    });
-
-    it("applies fade-out animation on dismiss", () => {
-      renderWithProvider();
-
-      fireEvent.click(screen.getByText("Show Success"));
-
-      const dismissButton = screen.getByLabelText("Dismiss notification");
-      fireEvent.click(dismissButton);
-
-      // During exit animation
-      expect(screen.getByRole("alert")).toHaveClass("animate-fade-out");
-    });
-  });
-
-  describe("toast container", () => {
-    it("renders toast container when there are toasts", () => {
-      const { container } = renderWithProvider();
-
-      fireEvent.click(screen.getByText("Show Success"));
-
-      const toastContainer = container.querySelector(".toast-container");
-      expect(toastContainer).toBeInTheDocument();
-    });
-
-    it("does not render toast container when there are no toasts", () => {
-      const { container } = renderWithProvider();
-
-      const toastContainer = container.querySelector(".toast-container");
-      expect(toastContainer).not.toBeInTheDocument();
+      expect(sonnerToast.dismiss).toHaveBeenCalledWith("some-id");
     });
   });
 
   describe("toast ID", () => {
-    it("returns unique ID when creating toast", () => {
-      const ids: string[] = [];
+    it("returns the sonner id when creating a toast", () => {
+      let created: unknown = null;
 
       function TestIds() {
         const toast = useToast();
         return (
           <button
             onClick={() => {
-              ids.push(toast.success("Toast"));
+              created = toast.success("Toast");
             }}
           >
             Add
@@ -390,13 +153,9 @@ describe("Toast", () => {
       }
 
       renderWithProvider(<TestIds />);
-
-      fireEvent.click(screen.getByText("Add"));
-      fireEvent.click(screen.getByText("Add"));
       fireEvent.click(screen.getByText("Add"));
 
-      expect(ids.length).toBe(3);
-      expect(new Set(ids).size).toBe(3); // All IDs should be unique
+      expect(typeof created).toBe("string");
     });
   });
 });

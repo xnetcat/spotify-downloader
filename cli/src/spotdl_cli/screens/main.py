@@ -52,12 +52,12 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Color scheme by entity type (matching frontend)
+# Color scheme by entity type (Control Room semantic hues, matching frontend)
 ENTITY_COLORS = {
-    EntityType.ARTIST: "#ffd93d",  # accent-needle (golden)
-    EntityType.ALBUM: "#4ecdc4",  # accent-cool (blue/teal)
-    EntityType.TRACK: "#00d084",  # accent-safe (green)
-    EntityType.PLAYLIST: "#ff6b35",  # accent-warm (orange)
+    EntityType.ARTIST: Theme.WARNING,  # yellow
+    EntityType.ALBUM: Theme.SECONDARY,  # info cyan
+    EntityType.TRACK: Theme.SUCCESS,  # green
+    EntityType.PLAYLIST: Theme.PRIMARY,  # amber
 }
 
 # Unicode icons per entity type (Midnight Vinyl aesthetic)

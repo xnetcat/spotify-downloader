@@ -1,22 +1,15 @@
+import { Search, ThumbsUp, ThumbsDown, Radar } from "lucide-react";
 import { useMatchesForSong, useDiscoverMatchesMutation } from "@/api/matches";
 import { useVote } from "@/api/votes";
 import { useAuthStore } from "@/stores/auth";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Badge,
-  Button,
-  ScoreBadge,
-  Spinner,
-} from "@/components/ui";
+import { Badge, Button, ScoreBadge, Skeleton } from "@/components/ui";
+import { cn } from "@/lib/utils";
 import type { Match } from "@/types";
 
 const MATCH_STATUS_STYLES: Record<string, { label: string; className: string }> = {
-  verified: { label: "Verified", className: "text-emerald-400 bg-emerald-950/40" },
-  rejected: { label: "Rejected", className: "text-red-400 bg-red-950/40" },
-  pending:  { label: "Pending",  className: "text-zinc-400 bg-zinc-800/60" },
+  verified: { label: "Verified", className: "text-success bg-success/15" },
+  rejected: { label: "Rejected", className: "text-destructive bg-destructive/15" },
+  pending: { label: "Pending", className: "text-muted-foreground bg-muted" },
 };
 
 const PLATFORM_LABELS: Record<string, string> = {
@@ -44,77 +37,78 @@ function MatchRow({ match, isAuthenticated }: { match: Match; isAuthenticated: b
   const score = rawScore > 1 ? Math.round(rawScore) : Math.round(rawScore * 100);
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/20 transition-colors">
-      {/* Score */}
+    <div className="flex items-center gap-3 px-3 py-3 transition-colors hover:bg-elevated/50">
       <ScoreBadge score={score} className="shrink-0" />
 
-      {/* Track info */}
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         {match.result.url ? (
           <a
             href={match.result.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-medium text-zinc-200 hover:text-accent-needle transition-colors truncate block text-sm"
+            className="block truncate text-sm font-medium text-foreground transition-colors hover:text-primary"
           >
             {match.result.name}
           </a>
         ) : (
-          <p className="font-medium text-zinc-200 truncate text-sm">{match.result.name}</p>
+          <p className="truncate text-sm font-medium text-foreground">{match.result.name}</p>
         )}
-        <div className="flex items-center gap-2 text-xs text-zinc-500 mt-0.5">
+        <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
           <span>{PLATFORM_LABELS[match.result.platform] ?? match.result.platform}</span>
           {match.result.duration > 0 && (
             <>
-              <span>·</span>
-              <span className="font-mono">{formatDurationMatch(match.result.duration)}</span>
+              <span className="text-faint">·</span>
+              <span className="font-mono tnum">{formatDurationMatch(match.result.duration)}</span>
             </>
           )}
           {match.submitted_by_username && (
             <>
-              <span>·</span>
+              <span className="text-faint">·</span>
               <span>by {match.submitted_by_username}</span>
             </>
           )}
         </div>
       </div>
 
-      {/* Status badge */}
-      <span className={`shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded ${statusStyle.className}`}>
+      <span
+        className={cn(
+          "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium",
+          statusStyle.className
+        )}
+      >
         {statusStyle.label}
       </span>
 
-      {/* Vote buttons */}
-      <div className="shrink-0 flex items-center gap-1">
+      <div className="flex shrink-0 items-center gap-1">
         <button
           disabled={!isAuthenticated || voteLoading}
           onClick={() => vote("up")}
-          className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${
+          className={cn(
+            "flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors",
             userVote === "up"
-              ? "bg-emerald-900/50 text-emerald-400"
-              : "text-zinc-500 hover:text-emerald-400 hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed"
-          }`}
+              ? "bg-success/15 text-success"
+              : "text-muted-foreground hover:bg-accent hover:text-success disabled:pointer-events-none disabled:opacity-40"
+          )}
           title={isAuthenticated ? "Upvote" : "Log in to vote"}
+          aria-label="Upvote match"
         >
-          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-          </svg>
-          <span>{match.upvotes ?? 0}</span>
+          <ThumbsUp className="size-3.5" />
+          <span className="font-mono tnum">{match.upvotes ?? 0}</span>
         </button>
         <button
           disabled={!isAuthenticated || voteLoading}
           onClick={() => vote("down")}
-          className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${
+          className={cn(
+            "flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors",
             userVote === "down"
-              ? "bg-red-900/50 text-red-400"
-              : "text-zinc-500 hover:text-red-400 hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed"
-          }`}
+              ? "bg-destructive/15 text-destructive"
+              : "text-muted-foreground hover:bg-accent hover:text-destructive disabled:pointer-events-none disabled:opacity-40"
+          )}
           title={isAuthenticated ? "Downvote" : "Log in to vote"}
+          aria-label="Downvote match"
         >
-          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-          <span>{match.downvotes ?? 0}</span>
+          <ThumbsDown className="size-3.5" />
+          <span className="font-mono tnum">{match.downvotes ?? 0}</span>
         </button>
       </div>
     </div>
@@ -131,53 +125,60 @@ export function SongMatchesSection({ songId }: SongMatchesSectionProps) {
   const discoverMatches = useDiscoverMatchesMutation(songId);
 
   return (
-    <Card variant="bordered" className="overflow-hidden">
-      <CardHeader className="border-b border-zinc-800/50">
-        <CardTitle className="flex items-center gap-2">
-          <svg className="w-5 h-5 text-accent-needle" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-          </svg>
-          Audio Matches
+    <section className="space-y-4">
+      <div className="flex items-center justify-between gap-4 border-b border-border pb-2">
+        <div className="flex items-center gap-2">
+          <h2 className="text-xs font-medium uppercase tracking-wider text-faint">Matches</h2>
           {matchesData && matchesData.length > 0 && (
-            <Badge variant="muted" size="sm">{matchesData.length}</Badge>
+            <Badge variant="muted" size="sm">
+              {matchesData.length}
+            </Badge>
           )}
-        </CardTitle>
+        </div>
         <Button
           size="sm"
           variant="outline"
-          disabled={discoverMatches.isPending}
+          isLoading={discoverMatches.isPending}
           onClick={() => discoverMatches.mutate(undefined)}
         >
-          {discoverMatches.isPending ? (
-            <Spinner size="sm" />
-          ) : (
-            <>
-              <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              Discover
-            </>
-          )}
+          {!discoverMatches.isPending && <Search />}
+          Discover
         </Button>
-      </CardHeader>
-      <CardContent className="p-0">
-        {matchesLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Spinner size="md" />
-          </div>
-        ) : matchesData && matchesData.length > 0 ? (
-          <div className="divide-y divide-zinc-800/50">
-            {matchesData.map((match) => (
-              <MatchRow key={match.id} match={match} isAuthenticated={isAuthenticated} />
-            ))}
-          </div>
-        ) : (
-          <div className="py-8 text-center">
-            <p className="text-zinc-500 text-sm">No audio matches found</p>
-            <p className="text-xs text-zinc-600 mt-1">Click Discover to search for matches</p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      </div>
+
+      {matchesLoading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 3 }, (_, i) => (
+            <div key={i} className="flex items-center gap-3 px-3 py-3">
+              <Skeleton className="h-6 w-10 rounded-md" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-3.5 w-1/2" />
+                <Skeleton className="h-3 w-1/3" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : matchesData && matchesData.length > 0 ? (
+        <div className="divide-y divide-border rounded-lg border border-border">
+          {matchesData.map((match) => (
+            <MatchRow key={match.id} match={match} isAuthenticated={isAuthenticated} />
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center gap-3 py-16 text-center">
+          <Radar className="size-8 text-faint" />
+          <p className="text-sm text-muted-foreground">No audio matches found for this track yet.</p>
+          <Button
+            size="sm"
+            variant="primary"
+            isLoading={discoverMatches.isPending}
+            onClick={() => discoverMatches.mutate(undefined)}
+          >
+            {!discoverMatches.isPending && <Search />}
+            Discover matches
+          </Button>
+        </div>
+      )}
+    </section>
   );
 }

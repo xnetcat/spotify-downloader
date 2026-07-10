@@ -17,11 +17,11 @@ class StatChip(Widget):
         margin-right: 3;
     }
     StatChip .stat-chip-label {
-        color: #6b6b76;
+        color: #5a6274;
         width: auto;
     }
     StatChip .stat-chip-value {
-        color: #fafafa;
+        color: #e8eaf0;
         text-style: bold;
         width: auto;
         margin-left: 1;

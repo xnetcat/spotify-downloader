@@ -1,56 +1,69 @@
 """Theme constants aligned with frontend design system.
 
 Colors are extracted from frontend/src/index.css to ensure visual consistency
-between the web frontend and CLI TUI.
+between the web frontend and CLI TUI. This is the "Control Room" identity:
+a broadcast-console palette — blue-ink black surfaces, hairline borders, and a
+single phosphor-amber accent — shared hex-for-hex with the web dark theme.
 """
 
 from __future__ import annotations
 
 
 class Theme:
-    """Frontend-aligned color theme for SpotDL CLI."""
+    """Frontend-aligned color theme for SpotDL CLI (Control Room)."""
 
     # ==================== ACCENT COLORS ====================
-    # Primary actions, highlights
-    PRIMARY = "#e8764b"  # muted terracotta (Midnight Vinyl)
-    # Focus glow — separate identity from primary
-    FOCUS = "#c4a35a"  # warm gold
-    # Secondary actions
-    SECONDARY = "#4ecdc4"  # --accent-secondary (teal)
+    # Primary actions, focus, active states, meters — phosphor amber
+    PRIMARY = "#f5a623"  # --primary (amber)
+    # Focus — collapsed into the single amber accent
+    FOCUS = "#f5a623"  # focus ring == primary
+    # Secondary signal, links — info cyan
+    SECONDARY = "#56c8d8"  # --info (cyan)
     # Success states
-    SUCCESS = "#00d084"  # --accent-success (green)
+    SUCCESS = "#4ade80"  # --success (green)
     # Errors, destructive actions
-    ERROR = "#ff3333"  # --accent-error (red)
-    # Premium highlights, warnings
-    WARNING = "#ffd93d"  # --accent-gold (gold/amber)
+    ERROR = "#f4506c"  # --destructive (red)
+    # Warnings
+    WARNING = "#facc15"  # --warning (yellow)
 
     # ==================== ADDITIONAL TOKENS ====================
-    BG_INSET = "#0c0c0e"  # Recessed panels for depth
-    TEXT_ACCENT = "#e8e0d0"  # Warm white for titles
+    BG_INSET = "#0d0f15"  # Recessed panels for depth
+    TEXT_ACCENT = "#eef0f6"  # Bright neutral for titles
 
     # ==================== BACKGROUND COLORS ====================
-    # True black - deepest layer
-    BG_VOID = "#08080a"  # --bg-void
-    # Base background - slightly warmer
-    BG_CHASSIS = "#0f1012"  # --bg-chassis
-    # Panel surfaces
-    BG_PANEL = "#161819"  # --bg-panel
-    # Elevated surfaces
-    BG_ELEVATED = "#1c1e20"  # --bg-elevated
-    # Cards, modals
-    BG_SURFACE = "#242628"  # --bg-surface
+    # Blue-ink black ramp, darkest -> lightest
+    BG_VOID = "#08090d"  # deepest recess
+    # Base background
+    BG_CHASSIS = "#0b0d12"  # --background
+    # Panel / sidebar surfaces
+    BG_PANEL = "#12151c"  # --surface
+    # Cards
+    BG_ELEVATED = "#171b24"  # --card
+    # Elevated surfaces, inputs, modals
+    BG_SURFACE = "#1e2430"  # --elevated
     # Hover states
-    BG_HOVER = "#2c2e32"  # --bg-hover
+    BG_HOVER = "#262d3a"  # --border tone as hover fill
 
     # ==================== TEXT COLORS ====================
-    TEXT_PRIMARY = "#fafafa"  # --color-text-primary
-    TEXT_SECONDARY = "#a8a8b3"  # --color-text-secondary
-    TEXT_MUTED = "#6b6b76"  # --color-text-muted
-    TEXT_DIM = "#454550"  # --color-text-dim
+    TEXT_PRIMARY = "#e8eaf0"  # --foreground
+    TEXT_SECONDARY = "#8b93a7"  # --muted-foreground
+    TEXT_MUTED = "#5a6274"  # --faint
+    TEXT_DIM = "#3a4150"  # below faint (unlit meter cells)
 
     # ==================== BORDER COLORS ====================
-    BORDER = "#2f2f33"  # --color-border
-    BORDER_SUBTLE = "#232326"  # --color-border-subtle
+    BORDER = "#262d3a"  # --border
+    BORDER_SUBTLE = "#1c222d"  # --border-subtle
+
+    # ==================== TINTS (dark accent chips) ====================
+    TINT_PRIMARY = "#2b1d05"  # amber chip bg
+    TINT_SUCCESS = "#0d2318"  # green chip bg
+    TINT_WARNING = "#2a2205"  # yellow chip bg
+    TINT_ERROR = "#2a0e17"  # red chip bg
+    TINT_INFO = "#0c2329"  # cyan chip bg
+
+    # ==================== SEGMENTED METER ====================
+    METER_LIT = "▰"  # lit LED cell
+    METER_UNLIT = "▱"  # unlit LED cell
 
     # ==================== PLATFORM COLORS ====================
     SPOTIFY = "#1db954"  # --color-spotify
@@ -168,6 +181,52 @@ def get_platform_icon(platform: str) -> str:
     return PLATFORM_ICONS.get(platform.lower(), "●")
 
 
+def segmented_meter(
+    value: float,
+    width: int = 12,
+    lit_color: str | None = None,
+    unlit_color: str | None = None,
+) -> str:
+    """Build Rich markup for a segmented LED meter — the signature element.
+
+    Renders ``width`` discrete cells: lit cells (``▰``) fill proportional to
+    ``value`` (clamped to 0..1), remaining cells stay unlit (``▱``). This is the
+    same LED-meter language used by the web UI.
+
+    Args:
+        value: Fill fraction in the range 0..1.
+        width: Total number of cells.
+        lit_color: Hex color for lit cells (defaults to amber primary).
+        unlit_color: Hex color for unlit cells (defaults to dim).
+
+    Returns:
+        Rich markup string.
+    """
+    lit = lit_color or Theme.PRIMARY
+    unlit = unlit_color or Theme.TEXT_DIM
+    clamped = max(0.0, min(1.0, value))
+    filled = round(clamped * width)
+    filled = max(0, min(width, filled))
+    parts = []
+    if filled:
+        parts.append(f"[{lit}]{Theme.METER_LIT * filled}[/]")
+    if width - filled:
+        parts.append(f"[{unlit}]{Theme.METER_UNLIT * (width - filled)}[/]")
+    return "".join(parts)
+
+
+def score_color(score: float) -> str:
+    """Return the meter color for a 0-100 match/quality score.
+
+    >=75 reads as success (green), >=45 as warning (yellow), else error (red).
+    """
+    if score >= 75:
+        return Theme.SUCCESS
+    if score >= 45:
+        return Theme.WARNING
+    return Theme.ERROR
+
+
 def format_number(num: int) -> str:
     """Format large numbers with K/M suffixes."""
     if num >= 1_000_000:
@@ -206,6 +265,8 @@ __all__ = [
     "get_platform_color",
     "get_platform_icon",
     "get_status_color",
+    "score_color",
+    "segmented_meter",
     "truncate",
 ]
 

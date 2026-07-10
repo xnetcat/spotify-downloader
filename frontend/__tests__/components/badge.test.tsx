@@ -11,37 +11,37 @@ describe("Badge", () => {
   it("renders with default variant", () => {
     render(<Badge>Default</Badge>);
     const badge = screen.getByText("Default");
-    expect(badge).toHaveClass("bg-zinc-800");
+    expect(badge).toHaveClass("bg-surface", "text-muted-foreground");
   });
 
   it("renders with success variant", () => {
     render(<Badge variant="success">Success</Badge>);
     const badge = screen.getByText("Success");
-    expect(badge).toHaveClass("bg-emerald-950/50", "text-emerald-400");
+    expect(badge).toHaveClass("bg-success/10", "text-success");
   });
 
   it("renders with warning variant", () => {
     render(<Badge variant="warning">Warning</Badge>);
     const badge = screen.getByText("Warning");
-    expect(badge).toHaveClass("bg-amber-950/50", "text-amber-400");
+    expect(badge).toHaveClass("bg-warning/10", "text-warning");
   });
 
   it("renders with error variant", () => {
     render(<Badge variant="error">Error</Badge>);
     const badge = screen.getByText("Error");
-    expect(badge).toHaveClass("bg-red-950/50", "text-red-400");
+    expect(badge).toHaveClass("bg-destructive/10", "text-destructive");
   });
 
   it("renders with info variant", () => {
     render(<Badge variant="info">Info</Badge>);
     const badge = screen.getByText("Info");
-    expect(badge).toHaveClass("bg-sky-950/50", "text-sky-400");
+    expect(badge).toHaveClass("bg-info/10", "text-info");
   });
 
   it("renders with premium variant", () => {
     render(<Badge variant="premium">Premium</Badge>);
     const badge = screen.getByText("Premium");
-    expect(badge).toHaveClass("bg-gradient-to-r");
+    expect(badge).toHaveClass("bg-primary/10", "text-primary");
   });
 
   it("applies custom className", () => {
@@ -55,10 +55,10 @@ describe("Badge", () => {
     expect(screen.getByTestId("test-badge")).toBeInTheDocument();
   });
 
-  it("has rounded-lg styling", () => {
+  it("has rounded-full styling", () => {
     render(<Badge>Rounded</Badge>);
     const badge = screen.getByText("Rounded");
-    expect(badge).toHaveClass("rounded-lg");
+    expect(badge).toHaveClass("rounded-full");
   });
 
   it("has proper text sizing for md size", () => {
@@ -98,6 +98,6 @@ describe("PlatformBadge", () => {
   it("renders with correct styling", () => {
     render(<PlatformBadge platform="spotify" data-testid="spotify-badge" />);
     const badge = screen.getByTestId("spotify-badge");
-    expect(badge).toHaveClass("rounded-lg", "font-semibold");
+    expect(badge).toHaveClass("rounded-full", "text-foreground");
   });
 });

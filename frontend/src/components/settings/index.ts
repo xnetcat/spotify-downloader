@@ -1,4 +1,6 @@
-export { SectionHeader } from "./SectionHeader";
+export { SettingsSection, SettingRow, SettingBlock } from "./SettingsSection";
+export { SettingsNav } from "./SettingsNav";
+export { SETTINGS_SECTIONS, type SettingsSectionMeta } from "./sections";
 export { SettingsProvider } from "./SettingsContext";
 export { DownloadSettings } from "./DownloadSettings";
 export { MetadataSettings } from "./MetadataSettings";

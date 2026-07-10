@@ -1,20 +1,31 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { motion } from "motion/react";
+import { CircleAlert } from "lucide-react";
 import { useLogin } from "@/api";
-import { Button, Input, Card, CardContent } from "@/components/ui";
+import { Button, Input, Card } from "@/components/ui";
 
 interface LoginSearch {
   redirect?: string;
 }
 
 export const Route = createFileRoute("/auth/login")({
-  validateSearch: (search: Record<string, unknown>): LoginSearch => {
-    return {
-      redirect: typeof search.redirect === "string" ? search.redirect : undefined,
-    };
-  },
+  validateSearch: (search: Record<string, unknown>): LoginSearch => ({
+    redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+  }),
   component: LoginPage,
 });
+
+function Wordmark() {
+  return (
+    <div className="text-center">
+      <span className="font-display text-3xl font-bold tracking-tight">
+        <span className="text-foreground">spot</span>
+        <span className="text-primary">DL</span>
+      </span>
+    </div>
+  );
+}
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -28,108 +39,81 @@ function LoginPage() {
     e.preventDefault();
     try {
       await loginMutation.mutateAsync({ username, password });
-      // Navigate to redirect path or home
       navigate({ to: redirect || "/" });
     } catch {
-      // Error is handled by loginMutation.error in the UI
+      // Error surfaced via loginMutation.error
     }
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center relative">
-      <div className="w-full max-w-md space-y-8 relative z-20">
-        {/* Header */}
+    <div className="flex min-h-[80vh] items-center justify-center">
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+        className="w-full max-w-sm space-y-6"
+      >
+        <Wordmark />
+
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--accent-safe)] to-[var(--accent-cool)] mb-6 shadow-lg glow">
-            <svg
-              className="w-8 h-8 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-              />
-            </svg>
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight text-[var(--color-text-primary)]">
-            Welcome Back
+          <h1 className="font-display text-xl font-semibold tracking-tight text-foreground">
+            Welcome back
           </h1>
-          <p className="text-[var(--color-text-muted)] mt-2">
-            Sign in to your account to continue
+          <p className="mt-1 text-sm text-muted-foreground">
+            Sign in to continue.
           </p>
         </div>
 
-        {/* Form Card */}
-        <Card variant="bordered" className="animate-scale-in glass">
-          <CardContent className="pt-6">
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <Input
-                label="Username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter your username"
-                required
-              />
-              <Input
-                label="Password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                required
-              />
+        <Card>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
+              label="Username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter your username"
+              required
+            />
+            <Input
+              label="Password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              required
+            />
 
-              {loginMutation.error && (
-                <div className="flex items-center gap-2 p-3 rounded-xl bg-[var(--accent-peak)]/10 border border-[var(--accent-peak)]/30 text-[var(--accent-peak)]">
-                  <svg
-                    className="w-5 h-5 shrink-0"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <p className="text-sm">
-                    {loginMutation.error instanceof Error
-                      ? loginMutation.error.message
-                      : "Login failed. Please try again."}
-                  </p>
-                </div>
-              )}
+            {loginMutation.error && (
+              <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                <CircleAlert className="size-4 shrink-0" />
+                <p>
+                  {loginMutation.error instanceof Error
+                    ? loginMutation.error.message
+                    : "Login failed. Please try again."}
+                </p>
+              </div>
+            )}
 
-              <Button
-                type="submit"
-                className="w-full"
-                size="lg"
-                isLoading={loginMutation.isPending}
-              >
-                Sign In
-              </Button>
-            </form>
-          </CardContent>
+            <Button type="submit" className="w-full" size="lg" isLoading={loginMutation.isPending}>
+              Sign in
+            </Button>
+          </form>
         </Card>
 
-        {/* Footer */}
-        <p className="text-center text-sm text-[var(--color-text-muted)]">
+        <p className="text-center text-sm text-muted-foreground">
           Don't have an account?{" "}
           <Link
             to="/auth/register"
-            className="text-[var(--accent-safe)] hover:text-[var(--accent-safe)]/80 font-medium transition-colors"
+            className="font-medium text-info underline-offset-4 hover:underline"
           >
             Create one
           </Link>
         </p>
-      </div>
+
+        <p className="text-center font-mono text-xs text-faint">
+          spotDL · your music, downloaded
+        </p>
+      </motion.div>
     </div>
   );
 }

@@ -1,46 +1,14 @@
-import { useState, useMemo } from "react";
-import { clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { useState, useMemo, type ReactNode } from "react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, ChevronUp } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "./button";
+import { Checkbox } from "./checkbox";
 
-// Sort icons
-const SortIcon = ({ direction }: { direction: "asc" | "desc" | null }) => (
-  <svg className="w-4 h-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    {direction === "asc" ? (
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-    ) : direction === "desc" ? (
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-    ) : (
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-    )}
-  </svg>
-);
-
-// Checkbox component
-const Checkbox = ({
-  checked,
-  indeterminate,
-  onChange,
-}: {
-  checked: boolean;
-  indeterminate?: boolean;
-  onChange: (checked: boolean) => void;
-}) => (
-  <input
-    type="checkbox"
-    checked={checked}
-    ref={(el) => {
-      if (el) el.indeterminate = indeterminate ?? false;
-    }}
-    onChange={(e) => onChange(e.target.checked)}
-    className={clsx(
-      "w-4 h-4 rounded",
-      "border-2 border-[var(--color-border)]",
-      "text-[var(--accent-safe)]",
-      "focus:ring-2 focus:ring-[var(--accent-safe)] focus:ring-offset-2 focus:ring-offset-[var(--bg-panel)]",
-      "bg-transparent"
-    )}
-  />
-);
+function SortIcon({ direction }: { direction: "asc" | "desc" | null }) {
+  if (direction === "asc") return <ChevronUp className="ml-1 size-3.5" />;
+  if (direction === "desc") return <ChevronDown className="ml-1 size-3.5" />;
+  return <ChevronsUpDown className="ml-1 size-3.5 text-faint" />;
+}
 
 export interface Column<T> {
   /** Unique key for the column */
@@ -48,11 +16,11 @@ export interface Column<T> {
   /** Header label */
   header: string;
   /** Accessor function or key path */
-  accessor: keyof T | ((row: T) => React.ReactNode);
+  accessor: keyof T | ((row: T) => ReactNode);
   /** Whether the column is sortable */
   sortable?: boolean;
   /** Custom cell renderer */
-  render?: (value: unknown, row: T) => React.ReactNode;
+  render?: (value: unknown, row: T) => ReactNode;
   /** Column width (Tailwind class) */
   width?: string;
   /** Text alignment */
@@ -100,43 +68,29 @@ export function DataTable<T>({
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
-  // Get row key
-  const getRowKey = (row: T): string => {
-    if (typeof rowKey === "function") {
-      return rowKey(row);
-    }
-    return String(row[rowKey]);
-  };
+  const getRowKey = (row: T): string =>
+    typeof rowKey === "function" ? rowKey(row) : String(row[rowKey]);
 
-  // Get cell value
-  const getCellValue = (row: T, column: Column<T>): unknown => {
-    if (typeof column.accessor === "function") {
-      return column.accessor(row);
-    }
-    return row[column.accessor];
-  };
+  const getCellValue = (row: T, column: Column<T>): unknown =>
+    typeof column.accessor === "function" ? column.accessor(row) : row[column.accessor];
 
-  // Sorted data
   const sortedData = useMemo(() => {
     if (!sortKey) return data;
-
     const column = columns.find((c) => c.key === sortKey);
     if (!column) return data;
 
     return [...data].sort((a, b) => {
       const aVal = getCellValue(a, column);
       const bVal = getCellValue(b, column);
-
       if (aVal === bVal) return 0;
       if (aVal === null || aVal === undefined) return 1;
       if (bVal === null || bVal === undefined) return -1;
-
       const comparison = aVal < bVal ? -1 : 1;
       return sortDirection === "asc" ? comparison : -comparison;
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, columns, sortKey, sortDirection]);
 
-  // Handle sort
   const handleSort = (key: string) => {
     if (sortKey === key) {
       setSortDirection((d) => (d === "asc" ? "desc" : "asc"));
@@ -146,59 +100,50 @@ export function DataTable<T>({
     }
   };
 
-  // Handle select all
   const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      onSelectionChange?.(new Set(data.map((row) => getRowKey(row))));
-    } else {
-      onSelectionChange?.(new Set());
-    }
+    onSelectionChange?.(checked ? new Set(data.map((row) => getRowKey(row))) : new Set());
   };
 
-  // Handle row select
   const handleRowSelect = (key: string, checked: boolean) => {
     const newSelection = new Set(selectedKeys);
-    if (checked) {
-      newSelection.add(key);
-    } else {
-      newSelection.delete(key);
-    }
+    if (checked) newSelection.add(key);
+    else newSelection.delete(key);
     onSelectionChange?.(newSelection);
   };
 
   const allSelected = data.length > 0 && selectedKeys.size === data.length;
   const someSelected = selectedKeys.size > 0 && selectedKeys.size < data.length;
 
+  const alignClass = (align?: Column<T>["align"]) =>
+    cn(align === "center" && "text-center", align === "right" && "text-right");
+
   return (
-    <div className={twMerge("overflow-auto", className)}>
-      <table className="data-table w-full">
-        <thead className={clsx(stickyHeader && "sticky top-0 z-10 bg-[var(--bg-panel)]")}>
-          <tr>
+    <div className={cn("overflow-x-auto", className)}>
+      <table className="w-full border-collapse text-sm">
+        <thead className={cn(stickyHeader && "sticky top-0 z-10 bg-card")}>
+          <tr className="border-b border-border">
             {selectable && (
               <th className="w-12 px-4 py-3">
                 <Checkbox
-                  checked={allSelected}
-                  indeterminate={someSelected}
-                  onChange={handleSelectAll}
+                  checked={someSelected ? "indeterminate" : allSelected}
+                  onCheckedChange={(v) => handleSelectAll(v === true)}
+                  aria-label="Select all rows"
                 />
               </th>
             )}
             {columns.map((column) => (
               <th
                 key={column.key}
-                className={clsx(
-                  "px-4 py-3 text-xs font-semibold uppercase tracking-wider",
-                  "text-[var(--color-text-muted)]",
-                  "border-b border-[var(--color-border)]",
+                className={cn(
+                  "px-4 py-3 text-xs font-medium uppercase tracking-wider text-faint",
                   column.width,
-                  column.align === "center" && "text-center",
-                  column.align === "right" && "text-right",
-                  column.sortable && "cursor-pointer select-none hover:text-[var(--color-text-primary)]"
+                  alignClass(column.align),
+                  column.sortable && "cursor-pointer select-none transition-colors hover:text-foreground"
                 )}
                 onClick={() => column.sortable && handleSort(column.key)}
               >
                 <div
-                  className={clsx(
+                  className={cn(
                     "inline-flex items-center",
                     column.align === "center" && "justify-center",
                     column.align === "right" && "justify-end"
@@ -206,9 +151,7 @@ export function DataTable<T>({
                 >
                   {column.header}
                   {column.sortable && (
-                    <SortIcon
-                      direction={sortKey === column.key ? sortDirection : null}
-                    />
+                    <SortIcon direction={sortKey === column.key ? sortDirection : null} />
                   )}
                 </div>
               </th>
@@ -217,33 +160,30 @@ export function DataTable<T>({
         </thead>
         <tbody>
           {isLoading ? (
-            // Loading skeleton rows
             Array.from({ length: 5 }).map((_, i) => (
-              <tr key={`skeleton-${i}`}>
+              <tr key={`skeleton-${i}`} className="border-b border-border">
                 {selectable && (
                   <td className="px-4 py-4">
-                    <div className="w-4 h-4 rounded shimmer" />
+                    <div className="size-4 animate-pulse rounded bg-elevated" />
                   </td>
                 )}
                 {columns.map((column) => (
                   <td key={column.key} className="px-4 py-4">
-                    <div className="h-4 rounded shimmer" style={{ width: "60%" }} />
+                    <div className="h-4 w-3/5 animate-pulse rounded bg-elevated" />
                   </td>
                 ))}
               </tr>
             ))
           ) : sortedData.length === 0 ? (
-            // Empty state
             <tr>
               <td
                 colSpan={columns.length + (selectable ? 1 : 0)}
-                className="px-4 py-12 text-center text-[var(--color-text-muted)]"
+                className="px-4 py-12 text-center text-muted-foreground"
               >
                 {emptyMessage}
               </td>
             </tr>
           ) : (
-            // Data rows
             sortedData.map((row) => {
               const key = getRowKey(row);
               const isSelected = selectedKeys.has(key);
@@ -251,22 +191,20 @@ export function DataTable<T>({
               return (
                 <tr
                   key={key}
-                  className={clsx(
-                    "transition-colors duration-150",
-                    isSelected && "bg-[var(--accent-safe)]/5",
+                  className={cn(
+                    "border-b border-border transition-colors duration-150",
+                    isSelected && "bg-primary/5",
                     onRowClick && "cursor-pointer",
-                    "hover:bg-[var(--bg-hover)]"
+                    "hover:bg-elevated/50"
                   )}
                   onClick={() => onRowClick?.(row)}
                 >
                   {selectable && (
-                    <td
-                      className="px-4 py-4"
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                    <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={isSelected}
-                        onChange={(checked) => handleRowSelect(key, checked)}
+                        onCheckedChange={(v) => handleRowSelect(key, v === true)}
+                        aria-label="Select row"
                       />
                     </td>
                   )}
@@ -274,15 +212,15 @@ export function DataTable<T>({
                     const value = getCellValue(row, column);
                     const rendered = column.render
                       ? column.render(value, row)
-                      : (value as React.ReactNode);
+                      : (value as ReactNode);
 
                     return (
                       <td
                         key={column.key}
-                        className={clsx(
-                          "px-4 py-4 border-b border-[var(--color-border-subtle)]",
-                          column.align === "center" && "text-center",
-                          column.align === "right" && "text-right"
+                        className={cn(
+                          "px-4 py-4 tabular-nums",
+                          column.align === "right" && "font-mono",
+                          alignClass(column.align)
                         )}
                       >
                         {rendered}
@@ -299,9 +237,6 @@ export function DataTable<T>({
   );
 }
 
-/**
- * Pagination component for DataTable
- */
 export interface PaginationProps {
   currentPage: number;
   totalPages: number;
@@ -309,80 +244,59 @@ export interface PaginationProps {
   className?: string;
 }
 
-export function Pagination({
-  currentPage,
-  totalPages,
-  onPageChange,
-  className,
-}: PaginationProps) {
+export function Pagination({ currentPage, totalPages, onPageChange, className }: PaginationProps) {
   const pages = useMemo(() => {
     const result: (number | "...")[] = [];
     const delta = 2;
-
     for (let i = 1; i <= totalPages; i++) {
-      if (
-        i === 1 ||
-        i === totalPages ||
-        (i >= currentPage - delta && i <= currentPage + delta)
-      ) {
+      if (i === 1 || i === totalPages || (i >= currentPage - delta && i <= currentPage + delta)) {
         result.push(i);
       } else if (result[result.length - 1] !== "...") {
         result.push("...");
       }
     }
-
     return result;
   }, [currentPage, totalPages]);
 
   return (
-    <div className={twMerge("flex items-center justify-center gap-1", className)}>
-      <button
+    <div className={cn("flex items-center justify-center gap-1", className)}>
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
-        className={clsx(
-          "px-3 py-1.5 rounded-lg text-sm",
-          "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]",
-          "hover:bg-[var(--bg-hover)]",
-          "disabled:opacity-50 disabled:cursor-not-allowed"
-        )}
       >
+        <ChevronLeft />
         Previous
-      </button>
+      </Button>
 
       {pages.map((page, i) =>
         page === "..." ? (
-          <span key={`ellipsis-${i}`} className="px-2 text-[var(--color-text-muted)]">
-            ...
+          <span key={`ellipsis-${i}`} className="px-2 font-mono text-faint">
+            …
           </span>
         ) : (
-          <button
+          <Button
             key={page}
+            variant={page === currentPage ? "primary" : "ghost"}
+            size="icon"
+            className="size-8 font-mono text-sm tnum"
             onClick={() => onPageChange(page)}
-            className={clsx(
-              "w-8 h-8 rounded-lg text-sm font-medium",
-              "transition-colors duration-150",
-              page === currentPage
-                ? "bg-[var(--accent-safe)] text-white"
-                : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--bg-hover)]"
-            )}
           >
             {page}
-          </button>
+          </Button>
         )
       )}
 
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className={clsx(
-          "px-3 py-1.5 rounded-lg text-sm",
-          "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]",
-          "hover:bg-[var(--bg-hover)]",
-          "disabled:opacity-50 disabled:cursor-not-allowed"
-        )}
       >
         Next
-      </button>
+        <ChevronRight />
+      </Button>
     </div>
   );
 }

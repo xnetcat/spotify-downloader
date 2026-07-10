@@ -1,37 +1,15 @@
-import { clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { useState } from "react";
+import { ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { MetadataSourceName } from "@/types";
 
-// Source colors and labels
-const sourceConfig: Record<
-  MetadataSourceName,
-  { label: string; color: string; bgColor: string }
-> = {
-  spotify: {
-    label: "Spotify",
-    color: "#1db954",
-    bgColor: "rgba(29, 185, 84, 0.1)",
-  },
-  musicbrainz: {
-    label: "MusicBrainz",
-    color: "#ba478f",
-    bgColor: "rgba(186, 71, 143, 0.1)",
-  },
-  discogs: {
-    label: "Discogs",
-    color: "#ff5500",
-    bgColor: "rgba(255, 85, 0, 0.1)",
-  },
-  deezer: {
-    label: "Deezer",
-    color: "#a238ff",
-    bgColor: "rgba(162, 56, 255, 0.1)",
-  },
-  apple_music: {
-    label: "Apple Music",
-    color: "#fc3c44",
-    bgColor: "rgba(252, 60, 68, 0.1)",
-  },
+// Source labels and identity-dot color (token/platform classes only — no hexes).
+const sourceConfig: Record<MetadataSourceName, { label: string; dot: string }> = {
+  spotify: { label: "Spotify", dot: "bg-spotify" },
+  musicbrainz: { label: "MusicBrainz", dot: "bg-info" },
+  discogs: { label: "Discogs", dot: "bg-warning" },
+  deezer: { label: "Deezer", dot: "bg-deezer" },
+  apple_music: { label: "Apple Music", dot: "bg-apple" },
 };
 
 export interface MetadataSourceBadgeProps {
@@ -52,46 +30,35 @@ export function MetadataSourceBadge({
   className,
 }: MetadataSourceBadgeProps) {
   const config = sourceConfig[source];
-
-  if (!config) {
-    return null;
-  }
+  if (!config) return null;
 
   const sizeClasses = {
-    sm: "text-[10px] px-1.5 py-0.5",
-    md: "text-xs px-2 py-1",
+    sm: "text-[10px] px-1.5 py-0.5 gap-1",
+    md: "text-xs px-2 py-1 gap-1.5",
   };
 
   return (
     <span
-      className={twMerge(
-        clsx(
-          "metadata-source-badge inline-flex items-center gap-1",
-          "font-medium uppercase tracking-wide rounded-full",
-          sizeClasses[size]
-        ),
+      className={cn(
+        "inline-flex items-center rounded-full border border-border bg-surface font-medium text-muted-foreground",
+        sizeClasses[size],
         className
       )}
-      style={{
-        color: config.color,
-        backgroundColor: config.bgColor,
-      }}
       title={
-        confidence !== undefined
-          ? `${config.label} (${confidence}% confidence)`
-          : config.label
+        confidence !== undefined ? `${config.label} (${confidence}% confidence)` : config.label
       }
     >
+      <span className={cn("size-1.5 shrink-0 rounded-full", config.dot)} aria-hidden />
       {config.label}
       {confidence !== undefined && (
-        <span className="opacity-60">{confidence}%</span>
+        <span className="font-mono tnum text-faint">{confidence}%</span>
       )}
     </span>
   );
 }
 
 /**
- * Display a metadata field with its source
+ * Display a metadata field with its source.
  */
 export interface MetadataFieldProps {
   /** Field label */
@@ -106,30 +73,20 @@ export interface MetadataFieldProps {
   className?: string;
 }
 
-export function MetadataField({
-  label,
-  value,
-  source,
-  confidence,
-  className,
-}: MetadataFieldProps) {
+export function MetadataField({ label, value, source, confidence, className }: MetadataFieldProps) {
   return (
-    <div className={twMerge("flex flex-col gap-1", className)}>
+    <div className={cn("flex flex-col gap-1", className)}>
       <div className="flex items-center gap-2">
-        <span className="text-xs text-[var(--color-text-muted)] uppercase tracking-wide">
-          {label}
-        </span>
-        {source && (
-          <MetadataSourceBadge source={source} confidence={confidence} size="sm" />
-        )}
+        <span className="text-xs font-medium uppercase tracking-wider text-faint">{label}</span>
+        {source && <MetadataSourceBadge source={source} confidence={confidence} size="sm" />}
       </div>
-      <div className="text-[var(--color-text-primary)]">{value}</div>
+      <div className="text-foreground">{value}</div>
     </div>
   );
 }
 
 /**
- * Grid layout for metadata fields
+ * Grid layout for metadata fields.
  */
 export interface MetadataGridProps {
   children: React.ReactNode;
@@ -137,26 +94,18 @@ export interface MetadataGridProps {
   className?: string;
 }
 
-export function MetadataGrid({
-  children,
-  columns = 2,
-  className,
-}: MetadataGridProps) {
+export function MetadataGrid({ children, columns = 2, className }: MetadataGridProps) {
   const gridCols = {
     2: "grid-cols-1 sm:grid-cols-2",
     3: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
     4: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
   };
 
-  return (
-    <div className={twMerge(clsx("grid gap-4", gridCols[columns]), className)}>
-      {children}
-    </div>
-  );
+  return <div className={cn("grid gap-4", gridCols[columns], className)}>{children}</div>;
 }
 
 /**
- * Collapsible panel for technical metadata
+ * Collapsible panel for technical metadata.
  */
 export interface MetadataPanelProps {
   /** Panel title */
@@ -178,48 +127,23 @@ export function MetadataPanel({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div
-      className={twMerge(
-        clsx(
-          "bg-[var(--bg-panel)] border border-[var(--color-border-subtle)]",
-          "rounded-xl overflow-hidden"
-        ),
-        className
-      )}
-    >
+    <div className={cn("overflow-hidden rounded-lg border border-border bg-card", className)}>
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={clsx(
-          "w-full flex items-center justify-between px-4 py-3",
-          "text-left text-sm font-medium text-[var(--color-text-primary)]",
-          "hover:bg-[var(--bg-hover)]",
-          "transition-colors duration-150"
-        )}
+        className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-foreground transition-colors hover:bg-elevated/50"
       >
         {title}
-        <svg
-          className={clsx(
-            "w-4 h-4 text-[var(--color-text-muted)]",
-            "transition-transform duration-200",
+        <ChevronDown
+          className={cn(
+            "size-4 text-muted-foreground transition-transform duration-200",
             isOpen && "rotate-180"
           )}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
+        />
       </button>
-      {isOpen && (
-        <div className="px-4 py-4 border-t border-[var(--color-border-subtle)]">
-          {children}
-        </div>
-      )}
+      {isOpen && <div className="border-t border-border px-4 py-4">{children}</div>}
     </div>
   );
 }
-
-// Required useState import
-import { useState } from "react";
 
 export default MetadataSourceBadge;

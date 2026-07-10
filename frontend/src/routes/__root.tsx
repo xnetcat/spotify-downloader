@@ -1,7 +1,7 @@
-import { createRootRoute, Outlet, useLocation } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { clsx } from "clsx";
-import { ToastProvider } from "@/components/ui/toast";
+import { createRootRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
+import { useEffect, useMemo } from "react";
+import { Search, Sun, Moon, ExternalLink } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   Sidebar,
   Breadcrumb,
@@ -9,51 +9,119 @@ import {
   useCommandPalette,
   buildBreadcrumbsFromPath,
 } from "@/components/layout";
+import { Kbd } from "@/components/ui/kbd";
+import { Meter } from "@/components/ui/meter";
+import { Toaster } from "@/components/ui/sonner";
+import { ToastProvider } from "@/components/ui/toast";
 import { DevModePanel } from "@/components/dev";
 import { DevConfigProvider, useDevConfig } from "@/contexts/DevConfigContext";
 import { useSettingsStore } from "@/stores/settings";
+import { useQueueStore } from "@/stores/queue";
 import { config } from "@/config";
 
 export const Route = createRootRoute({
   component: RootLayout,
 });
 
-// Top bar component
+const ACTIVE_STATUSES = new Set(["pending", "searching", "downloading", "converting", "embedding"]);
+
+/** Live download activity pill — appears in the header while the queue is working. */
+function QueuePill() {
+  const items = useQueueStore((s) => s.items);
+  const { features } = useDevConfig();
+
+  const active = useMemo(() => items.filter((i) => ACTIVE_STATUSES.has(i.status)), [items]);
+
+  if (!features.hasQueue || active.length === 0) return null;
+
+  const avgProgress =
+    active.reduce((sum, item) => sum + (item.progress ?? 0), 0) / active.length;
+
+  return (
+    <Link
+      to="/queue"
+      className={cn(
+        "hidden sm:flex items-center gap-2.5 rounded-md border border-border bg-card px-3 py-1.5",
+        "transition-colors hover:border-primary/50"
+      )}
+      aria-label={`${active.length} active downloads`}
+    >
+      <span className="font-mono text-xs text-primary tnum">{active.length}</span>
+      <Meter value={avgProgress} max={100} cells={8} size="sm" active className="w-16" />
+    </Link>
+  );
+}
+
+function ThemeToggle() {
+  const theme = useSettingsStore((s) => s.theme);
+  const update = useSettingsStore((s) => s.update);
+  const isDark =
+    theme === "dark" ||
+    (theme === "system" &&
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+  return (
+    <button
+      onClick={() => update("theme", isDark ? "light" : "dark")}
+      aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
+      className={cn(
+        "flex size-9 items-center justify-center rounded-md text-muted-foreground",
+        "transition-colors hover:bg-accent hover:text-accent-foreground",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      )}
+    >
+      {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+    </button>
+  );
+}
+
 function TopBar({
   onSearchClick,
   breadcrumbs,
 }: {
   onSearchClick: () => void;
-  breadcrumbs: import('@/types').BreadcrumbItem[];
+  breadcrumbs: import("@/types").BreadcrumbItem[];
 }) {
   return (
-    <header className="h-14 bg-[var(--bg-chassis)] border-b border-[var(--color-border-subtle)] flex items-center justify-between px-6">
-      {/* Left: Breadcrumb */}
-      <div className="flex items-center gap-4">
-        <Breadcrumb items={breadcrumbs} />
-      </div>
+    <header
+      className={cn(
+        "sticky top-0 z-30 flex h-14 items-center justify-between gap-4 px-6",
+        "border-b border-border bg-background/90 backdrop-blur-sm"
+      )}
+    >
+      <Breadcrumb items={breadcrumbs} className="min-w-0" />
 
-      {/* Right: Search */}
-      <div className="flex items-center">
+      <div className="flex items-center gap-2">
+        <QueuePill />
         <button
           onClick={onSearchClick}
-          className={clsx(
-            "flex items-center gap-3 px-4 py-2 rounded-xl",
-            "bg-[var(--bg-surface)] border border-[var(--color-border-subtle)]",
-            "text-sm text-[var(--color-text-muted)]",
-            "hover:text-[var(--color-text-secondary)] hover:border-[var(--color-border)] hover:bg-[var(--bg-hover)]",
-            "transition-colors duration-150",
-            "min-w-[200px] sm:min-w-[280px]"
+          className={cn(
+            "flex items-center gap-3 rounded-md border border-border bg-card px-3 py-1.5",
+            "text-sm text-muted-foreground transition-colors",
+            "hover:border-faint/60 hover:text-foreground",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "min-w-[180px] sm:min-w-[260px]"
           )}
         >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <span className="flex-1 text-left">Search songs, albums, artists...</span>
-          <kbd className="hidden sm:inline px-2 py-1 rounded-md bg-[var(--bg-void)] text-xs font-medium">
-            ⌘K
-          </kbd>
+          <Search className="size-4 shrink-0" />
+          <span className="flex-1 text-left">Search…</span>
+          <Kbd className="hidden sm:inline-flex">⌘K</Kbd>
         </button>
+        <ThemeToggle />
+        <a
+          href={config.githubUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="spotDL on GitHub"
+          className={cn(
+            "hidden sm:flex h-9 items-center gap-1.5 rounded-md px-2.5 text-muted-foreground",
+            "transition-colors hover:bg-accent hover:text-accent-foreground"
+          )}
+        >
+          <span className="font-mono text-xs">GitHub</span>
+          <ExternalLink className="size-3.5" />
+        </a>
       </div>
     </header>
   );
@@ -71,89 +139,73 @@ function RootLayoutContent() {
   const location = useLocation();
   const { isOpen: isPaletteOpen, open: openPalette, close: closePalette } = useCommandPalette();
   const { features } = useDevConfig();
+  const theme = useSettingsStore((s) => s.theme);
   const enableAnimations = useSettingsStore((s) => s.enableAnimations);
   const reduceMotion = useSettingsStore((s) => s.reduceMotion);
+  const queueItems = useQueueStore((s) => s.items);
 
-  // Apply animation settings globally via CSS class on document root
+  const activeCount = useMemo(
+    () => queueItems.filter((i) => ACTIVE_STATUSES.has(i.status)).length,
+    [queueItems]
+  );
+
+  // Theme: .dark class on <html>, following the setting (system tracks the OS)
   useEffect(() => {
     const root = document.documentElement;
-    if (!enableAnimations || reduceMotion) {
-      root.classList.add("reduce-motion");
-    } else {
-      root.classList.remove("reduce-motion");
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => {
+      const dark = theme === "dark" || (theme === "system" && media.matches);
+      root.classList.toggle("dark", dark);
+    };
+    apply();
+    if (theme === "system") {
+      media.addEventListener("change", apply);
+      return () => media.removeEventListener("change", apply);
     }
+  }, [theme]);
+
+  // Motion preferences
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle("reduce-motion", !enableAnimations || reduceMotion);
   }, [enableAnimations, reduceMotion]);
 
-  // Build breadcrumbs from current path
   const breadcrumbs = buildBreadcrumbsFromPath(location.pathname);
 
   return (
     <ToastProvider>
-      <div className="min-h-screen bg-[var(--bg-void)] text-[var(--color-text-primary)]">
-        {/* Sidebar */}
-        <Sidebar />
+      <div className="min-h-screen bg-background text-foreground">
+        <Sidebar queueCount={activeCount} />
 
-        {/* Main content area */}
-        <div className="md:ml-16 flex flex-col min-h-screen">
-          {/* Hosted Mode Banner */}
+        <div className="flex min-h-screen flex-col md:ml-16">
           {features.isHosted && (
-            <div className="bg-gradient-to-r from-[var(--accent-needle)]/10 via-[var(--accent-warm)]/10 to-[var(--accent-safe)]/10 border-b border-[var(--accent-needle)]/20 py-2 px-4 text-center">
-              <p className="text-sm text-[var(--accent-warm)]">
-                Welcome to SpotDL - cross-platform metadata, matching, and downloads.{" "}
+            <div className="border-b border-primary/20 bg-primary/5 px-4 py-2 text-center">
+              <p className="text-sm text-muted-foreground">
+                This is the hosted spotDL catalog — metadata, matching, and lyrics.{" "}
                 <a
                   href={config.githubUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-medium underline underline-offset-2 hover:text-[var(--accent-needle)]"
+                  className="font-medium text-primary underline underline-offset-2 hover:opacity-80"
                 >
                   Self-host
                 </a>{" "}
-                for downloads.
+                to enable downloads.
               </p>
             </div>
           )}
 
-          {/* Top bar */}
-          <TopBar
-            onSearchClick={openPalette}
-            breadcrumbs={breadcrumbs}
-          />
+          <TopBar onSearchClick={openPalette} breadcrumbs={breadcrumbs} />
 
-          {/* Page content */}
-          <main className="flex-1 overflow-y-auto">
-            <div className="max-w-7xl mx-auto px-6 py-8">
-              <div className="animate-fade-in">
-                <Outlet />
-              </div>
+          <main className="flex-1">
+            <div className="mx-auto w-full max-w-6xl px-6 py-8">
+              <Outlet />
             </div>
           </main>
-
-          {/* Footer */}
-          <footer className="border-t border-[var(--color-border-subtle)] py-4 px-6">
-            <div className="max-w-7xl mx-auto flex items-center justify-between">
-              <p className="text-xs text-[var(--color-text-dim)]">
-                SpotDL v{config.version}
-              </p>
-              <div className="flex items-center gap-4">
-                <a
-                  href={config.githubUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[var(--color-text-dim)] hover:text-[var(--color-text-muted)] transition-colors"
-                >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
-                  </svg>
-                </a>
-              </div>
-            </div>
-          </footer>
         </div>
 
-        {/* Command Palette */}
         <CommandPalette isOpen={isPaletteOpen} onClose={closePalette} />
-
-        {/* Dev Mode Panel - only visible in development */}
+        <Toaster />
         <DevModePanel />
       </div>
     </ToastProvider>

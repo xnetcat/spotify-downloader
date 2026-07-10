@@ -41,12 +41,13 @@ describe("Button", () => {
 
   it("applies variant styles", () => {
     const { rerender } = render(<Button variant="primary">Primary</Button>);
-    // Primary uses gradient now
-    expect(screen.getByRole("button")).toHaveClass("bg-gradient-to-r");
+    expect(screen.getByRole("button")).toHaveClass("bg-primary");
 
     rerender(<Button variant="danger">Danger</Button>);
-    // Danger also uses gradient
-    expect(screen.getByRole("button")).toHaveClass("from-red-600");
+    expect(screen.getByRole("button")).toHaveClass("bg-destructive");
+
+    rerender(<Button variant="secondary">Secondary</Button>);
+    expect(screen.getByRole("button")).toHaveClass("bg-secondary");
 
     rerender(<Button variant="outline">Outline</Button>);
     expect(screen.getByRole("button")).toHaveClass("border");
@@ -54,11 +55,16 @@ describe("Button", () => {
 
   it("applies size styles", () => {
     const { rerender } = render(<Button size="sm">Small</Button>);
-    expect(screen.getByRole("button")).toHaveClass("px-3", "py-1.5");
+    expect(screen.getByRole("button")).toHaveClass("h-8", "px-3");
+
+    rerender(<Button size="md">Medium</Button>);
+    expect(screen.getByRole("button")).toHaveClass("h-9", "px-4");
 
     rerender(<Button size="lg">Large</Button>);
-    // Large size is now px-7 py-3.5
-    expect(screen.getByRole("button")).toHaveClass("px-7", "py-3.5");
+    expect(screen.getByRole("button")).toHaveClass("h-11", "px-6");
+
+    rerender(<Button size="icon">Icon</Button>);
+    expect(screen.getByRole("button")).toHaveClass("size-9");
   });
 
   it("merges custom className", () => {

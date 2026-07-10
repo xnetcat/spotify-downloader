@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { clsx } from "clsx";
+import { AlertTriangle, Check, Clock, RefreshCw } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "./button";
 import { useAuthStore } from "@/stores/auth";
 
@@ -230,10 +231,20 @@ export function RefreshMetadataButton({
 
   // Icon-only variant
   if (variant === "icon") {
+    const IconCmp =
+      feedback === "success"
+        ? Check
+        : feedback === "error"
+          ? AlertTriangle
+          : feedback === "cooldown"
+            ? Clock
+            : RefreshCw;
     return (
       <button
+        type="button"
         onClick={handleClick}
         disabled={isDisabled}
+        aria-label="Refresh metadata"
         title={
           isOnCooldown
             ? `Refresh available in ${formatRemainingTime(remainingCooldown)}`
@@ -241,67 +252,26 @@ export function RefreshMetadataButton({
               ? "On cooldown"
               : "Refresh metadata"
         }
-        className={clsx(
-          "p-2 rounded-lg transition-all relative",
-          "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50",
-          "disabled:opacity-50 disabled:cursor-not-allowed",
-          feedback === "success" && "text-emerald-400",
-          (feedback === "error" || feedback === "cooldown") && "text-amber-400",
+        className={cn(
+          "relative rounded-md p-2 transition-colors",
+          "text-muted-foreground hover:bg-accent hover:text-foreground",
+          "disabled:cursor-not-allowed disabled:opacity-50",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
+          feedback === "success" && "text-success",
+          feedback === "error" && "text-destructive",
+          feedback === "cooldown" && "text-warning",
           className
         )}
       >
-        <svg
-          className={clsx("w-4 h-4", isLoading && "animate-spin")}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          {isLoading ? (
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            />
-          ) : feedback === "success" ? (
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M5 13l4 4L19 7"
-            />
-          ) : feedback === "error" ? (
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-            />
-          ) : feedback === "cooldown" ? (
-            // Clock icon for cooldown
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          ) : (
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            />
-          )}
-        </svg>
+        <IconCmp className={cn("size-4", isLoading && "animate-spin")} />
       </button>
     );
   }
 
   // Button text based on state
   const getButtonText = () => {
-    if (isLoading) return "Refreshing...";
-    if (feedback === "success") return "Refreshed!";
+    if (isLoading) return "Refreshing…";
+    if (feedback === "success") return "Refreshed";
     if (feedback === "error") return "Failed";
     if (feedback === "cooldown") return "On cooldown";
     if (isOnCooldown) return `Wait ${formatRemainingTime(remainingCooldown)}`;
@@ -324,27 +294,15 @@ export function RefreshMetadataButton({
             ? "This entity was recently refreshed"
             : undefined
       }
-      className={clsx(
-        feedback === "success" && "!text-emerald-400",
-        feedback === "error" && "!text-red-400",
-        feedback === "cooldown" && "!text-amber-400",
+      className={cn(
+        feedback === "success" && "!text-success",
+        feedback === "error" && "!text-destructive",
+        feedback === "cooldown" && "!text-warning",
         isOnCooldown && "opacity-70",
         className
       )}
     >
-      <svg
-        className={clsx("w-4 h-4 mr-2", isLoading && "animate-spin")}
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-        />
-      </svg>
+      <RefreshCw className={cn("size-4", isLoading && "animate-spin")} />
       {getButtonText()}
     </Button>
   );

@@ -1,6 +1,18 @@
 export { Button, type ButtonProps } from "./button";
 export { Input, type InputProps } from "./input";
-export { Select, type SelectProps, type SelectOption } from "./select";
+export {
+  Select,
+  type SelectProps,
+  type SelectOption,
+  RadixSelect,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+  SelectGroup,
+  SelectLabel,
+  SelectSeparator,
+} from "./select";
 export {
   Card,
   CardHeader,
@@ -131,3 +143,116 @@ export {
   type EntityErrorKind,
   type ClassifiedEntityError,
 } from "./entity-error-card";
+
+// ==========================================================================
+// Control Room primitives (shadcn/ui on Radix, adapted to design tokens)
+// ==========================================================================
+
+export { Meter, scoreColor, type MeterProps } from "./meter";
+
+export {
+  Dialog,
+  DialogPortal,
+  DialogOverlay,
+  DialogTrigger,
+  DialogClose,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+} from "./dialog";
+
+export {
+  AlertDialog,
+  AlertDialogPortal,
+  AlertDialogOverlay,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "./alert-dialog";
+
+export {
+  Sheet,
+  SheetPortal,
+  SheetOverlay,
+  SheetTrigger,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+  SheetFooter,
+  SheetTitle,
+  SheetDescription,
+} from "./sheet";
+
+export {
+  Drawer,
+  DrawerPortal,
+  DrawerOverlay,
+  DrawerTrigger,
+  DrawerClose,
+  DrawerContent,
+  DrawerHeader,
+  DrawerFooter,
+  DrawerTitle,
+  DrawerDescription,
+} from "./drawer";
+
+export {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuCheckboxItem,
+  DropdownMenuRadioItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuGroup,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuRadioGroup,
+} from "./dropdown-menu";
+
+export { Popover, PopoverTrigger, PopoverContent, PopoverAnchor, PopoverClose } from "./popover";
+
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "./tooltip";
+
+export { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs";
+
+export { Collapsible, CollapsibleTrigger, CollapsibleContent } from "./collapsible";
+
+export { Toggle, toggleVariants } from "./toggle";
+export { ToggleGroup, ToggleGroupItem } from "./toggle-group";
+
+export { Label } from "./label";
+export { Textarea, type TextareaProps } from "./textarea";
+export { Checkbox } from "./checkbox";
+export { Switch } from "./switch";
+export { Progress } from "./progress";
+export { Separator } from "./separator";
+export { ScrollArea, ScrollBar } from "./scroll-area";
+export { Avatar, AvatarImage, AvatarFallback } from "./avatar";
+export { Alert, AlertTitle, AlertDescription, alertVariants, type AlertProps } from "./alert";
+export { Kbd, type KbdProps } from "./kbd";
+
+export {
+  Command,
+  CommandDialog,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandShortcut,
+  CommandSeparator,
+} from "./command";
+
+export { Toaster, toast } from "./sonner";

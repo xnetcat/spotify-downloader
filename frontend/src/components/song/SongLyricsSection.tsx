@@ -1,27 +1,15 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { FileText } from "lucide-react";
 import {
   useAllLyrics,
   fetchAllLyrics,
   useSubmitLyrics,
   entityKeys,
 } from "@/api/entities";
-import {
-  useLyrics,
-  hasLyrics,
-  toLyrics,
-} from "@/api";
+import { useLyrics, hasLyrics, toLyrics } from "@/api";
 import { useAuthStore } from "@/stores/auth";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Badge,
-  Button,
-  Spinner,
-  useToast,
-} from "@/components/ui";
+import { Badge, Button, Skeleton, useToast } from "@/components/ui";
 import { LyricsDisplay, MultiSourceLyricsDisplay } from "@/components/ui/lyrics-display";
 import { SubmitLyricsModal } from "@/components/ui/submit-lyrics-modal";
 
@@ -45,62 +33,56 @@ export function SongLyricsSection({ songId, hasSong }: SongLyricsSectionProps) {
 
   const lyrics = lyricsData && hasLyrics(lyricsData) ? toLyrics(lyricsData) : null;
 
+  const handleFetchAll = async () => {
+    setFetchingAllLyrics(true);
+    try {
+      await fetchAllLyrics(songId);
+      queryClient.invalidateQueries({ queryKey: [...entityKeys.song(songId), "all-lyrics"] });
+      showSuccess("Fetched lyrics from all sources");
+    } catch {
+      showError("Failed to fetch lyrics");
+    } finally {
+      setFetchingAllLyrics(false);
+    }
+  };
+
   return (
     <>
-      <Card variant="bordered" className="overflow-hidden">
-        <CardHeader className="border-b border-zinc-800/50">
-          <CardTitle className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-accent-cool" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Lyrics
+      <section className="space-y-4">
+        <div className="flex items-center justify-between gap-4 border-b border-border pb-2">
+          <div className="flex items-center gap-2">
+            <h2 className="text-xs font-medium uppercase tracking-wider text-faint">Lyrics</h2>
             {allLyricsData && allLyricsData.lyrics.length > 1 && (
               <Badge variant="muted" size="sm">
                 {allLyricsData.lyrics.length} sources
               </Badge>
             )}
-          </CardTitle>
+          </div>
           <div className="flex items-center gap-2">
             {isAuthenticated && (
-              <Button
-                size="sm"
-                variant="primary"
-                onClick={() => setShowSubmitLyrics(true)}
-              >
-                Add Lyrics
+              <Button size="sm" variant="primary" onClick={() => setShowSubmitLyrics(true)}>
+                Add lyrics
               </Button>
             )}
             {hasSong && (
               <Button
                 size="sm"
                 variant="secondary"
-                disabled={fetchingAllLyrics}
-                onClick={async () => {
-                  setFetchingAllLyrics(true);
-                  try {
-                    await fetchAllLyrics(songId);
-                    queryClient.invalidateQueries({ queryKey: [...entityKeys.song(songId), "all-lyrics"] });
-                    showSuccess("Fetched lyrics from all sources");
-                  } catch {
-                    showError("Failed to fetch lyrics");
-                  } finally {
-                    setFetchingAllLyrics(false);
-                  }
-                }}
+                isLoading={fetchingAllLyrics}
+                onClick={handleFetchAll}
               >
-                {fetchingAllLyrics ? (
-                  <Spinner size="sm" />
-                ) : (
-                  "Fetch All Sources"
-                )}
+                Fetch all sources
               </Button>
             )}
           </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          {(lyricsLoading || allLyricsLoading) ? (
-            <div className="flex items-center justify-center py-12">
-              <Spinner size="md" />
+        </div>
+
+        <div className="overflow-hidden rounded-lg border border-border bg-surface [&_*]:leading-loose">
+          {lyricsLoading || allLyricsLoading ? (
+            <div className="space-y-2 p-5">
+              {Array.from({ length: 6 }, (_, i) => (
+                <Skeleton key={i} className="h-3.5" style={{ width: `${55 + ((i * 13) % 40)}%` }} />
+              ))}
             </div>
           ) : allLyricsData && allLyricsData.lyrics.length > 0 ? (
             <MultiSourceLyricsDisplay
@@ -110,29 +92,25 @@ export function SongLyricsSection({ songId, hasSong }: SongLyricsSectionProps) {
               maxHeight="400px"
             />
           ) : lyrics ? (
-            <LyricsDisplay
-              lyrics={lyrics}
-              maxHeight="400px"
-            />
+            <LyricsDisplay lyrics={lyrics} maxHeight="400px" />
           ) : (
-            <div className="py-12 text-center">
-              <p className="text-zinc-500">No lyrics available</p>
-              <p className="text-sm text-zinc-600 mt-1">
-                Lyrics couldn't be found for this track
-              </p>
+            <div className="flex flex-col items-center gap-2 py-16 text-center">
+              <FileText className="size-8 text-faint" />
+              <p className="text-sm text-muted-foreground">No lyrics available</p>
+              <p className="text-xs text-faint">Lyrics couldn't be found for this track</p>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      {/* Submit Lyrics Modal */}
       <SubmitLyricsModal
         isOpen={showSubmitLyrics}
         onClose={() => setShowSubmitLyrics(false)}
         onSubmit={(data) => {
-          submitLyricsMutation.mutate({ songId, ...data }, {
-            onSuccess: () => setShowSubmitLyrics(false),
-          });
+          submitLyricsMutation.mutate(
+            { songId, ...data },
+            { onSuccess: () => setShowSubmitLyrics(false) }
+          );
         }}
         isSubmitting={submitLyricsMutation.isPending}
       />

@@ -7,6 +7,7 @@ export type AudioQuality = "best" | "320k" | "256k" | "192k" | "128k";
 export type OverwriteMode = "skip" | "force" | "metadata";
 export type FilenameRestrict = "strict" | "loose" | null;
 export type LogLevel = "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL";
+export type ThemePreference = "dark" | "light" | "system";
 
 export interface ProviderPreference {
   id: string;
@@ -81,6 +82,7 @@ export interface SettingsData {
   cookieFile: string;
 
   // Appearance settings
+  theme: ThemePreference;
   compactSidebar: boolean;
   enableAnimations: boolean;
   reduceMotion: boolean;
@@ -164,6 +166,7 @@ export const defaultSettings: SettingsData = {
   timeMatchThreshold: 25,
   logLevel: "INFO",
   cookieFile: "",
+  theme: "dark",
   compactSidebar: true,
   enableAnimations: true,
   reduceMotion: false,

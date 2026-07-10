@@ -1,8 +1,14 @@
-import { Badge } from "@/components/ui";
+import { useNavigate } from "@tanstack/react-router";
+import { Download, Plus, ChevronRight } from "lucide-react";
+import { CoverArt } from "@/components/ui/cover-art";
+import { useFeatures } from "@/contexts/DevConfigContext";
+import { cn } from "@/lib/utils";
 import type { SearchResult, EntityType, PlatformInfo } from "@/types";
 
 interface EntitySearchResultCardProps {
   result: SearchResult;
+  /** Queue/download the entity. When provided (and downloads are enabled) a hover action appears. */
+  onAddToQueue?: (result: SearchResult) => void;
 }
 
 const entityTypeLabels: Record<EntityType, string> = {
@@ -13,135 +19,135 @@ const entityTypeLabels: Record<EntityType, string> = {
   all: "All",
 };
 
-const entityRoutes: Record<EntityType, string> = {
-  artist: "/artist",
-  album: "/album",
-  playlist: "/playlist",
-  track: "/song",
-  all: "/search",
+/** Platform identity dot colors — the only place platform colors are allowed (DESIGN.md rule 12). */
+const PLATFORM_DOT: Record<string, string> = {
+  spotify: "bg-spotify",
+  apple_music: "bg-apple",
+  deezer: "bg-deezer",
+  youtube: "bg-youtube",
+  youtube_music: "bg-ytmusic",
+  soundcloud: "bg-soundcloud",
+  bandcamp: "bg-bandcamp",
+  tidal: "bg-tidal",
+  amazon: "bg-amazon",
 };
 
-const PLATFORM_COLORS: Record<string, string> = {
-  spotify: "bg-[#1db954]/20 text-[#1db954] border-[#1db954]/30",
-  youtube_music: "bg-red-500/20 text-red-400 border-red-500/30",
-  deezer: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-  soundcloud: "bg-orange-500/20 text-orange-400 border-orange-500/30",
-  apple_music: "bg-pink-500/20 text-pink-400 border-pink-500/30",
-  tidal: "bg-zinc-500/20 text-zinc-400 border-zinc-500/30",
-  bandcamp: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
-  youtube: "bg-red-500/20 text-red-400 border-red-500/30",
-};
+function formatDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
 
-function PlatformBadges({ platforms }: { platforms: PlatformInfo[] }) {
+function PlatformDots({ platforms }: { platforms: PlatformInfo[] }) {
+  if (platforms.length === 0) return null;
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {platforms.slice(0, 3).map((p) => (
+    <div className="flex items-center gap-1" aria-label={`On ${platforms.map((p) => p.platform.replace("_", " ")).join(", ")}`}>
+      {platforms.slice(0, 5).map((p) => (
         <span
           key={p.platform}
-          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${PLATFORM_COLORS[p.platform] || "bg-zinc-800 text-zinc-400 border-zinc-700"}`}
-        >
-          {p.platform.replace("_", " ")}
-        </span>
+          className={cn("size-1.5 rounded-full", PLATFORM_DOT[p.platform] ?? "bg-faint")}
+          title={p.platform.replace("_", " ")}
+        />
       ))}
-      {platforms.length > 3 && (
-        <span className="text-[10px] text-zinc-500">+{platforms.length - 3}</span>
-      )}
     </div>
   );
 }
 
-export function EntitySearchResultCard({ result }: EntitySearchResultCardProps) {
-  const routeBase = entityRoutes[result.entity_type];
-  // Use internal UUID - no platform in URL
-  const href = `${routeBase}/${result.id}`;
+/**
+ * Dense Control Room search result row: thumb, entity-type eyebrow, name + subtitle,
+ * platform dots, and right-aligned mono metadata. Hover lifts to `bg-elevated`.
+ */
+export function EntitySearchResultCard({ result, onAddToQueue }: EntitySearchResultCardProps) {
+  const navigate = useNavigate();
+  const features = useFeatures();
+
+  const go = () => {
+    switch (result.entity_type) {
+      case "artist":
+        navigate({ to: "/artist/$id", params: { id: result.id } });
+        break;
+      case "album":
+        navigate({ to: "/album/$id", params: { id: result.id } });
+        break;
+      case "playlist":
+        navigate({ to: "/playlist/$id", params: { id: result.id } });
+        break;
+      case "track":
+      default:
+        navigate({ to: "/song/$id", params: { id: result.id } });
+    }
+  };
+
+  const showAction = features.canDownload && !!onAddToQueue;
+  const isArtist = result.entity_type === "artist";
 
   return (
-    <a
-      href={href}
-      className="group relative flex items-center gap-4 p-4 bg-zinc-900/50 hover:bg-zinc-800/70 border border-zinc-800/50 hover:border-zinc-700/50 rounded-xl cursor-pointer transition-all duration-200 hover:shadow-lg hover:shadow-black/20"
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={go}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          go();
+        }
+      }}
+      className={cn(
+        "group flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5",
+        "transition-colors hover:bg-elevated",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      )}
     >
-      {/* Image */}
-      <div className="relative w-16 h-16 shrink-0">
-        {result.image_url ? (
-          <img
-            src={result.image_url}
-            alt={result.name}
-            className={`w-16 h-16 object-cover shadow-md group-hover:shadow-lg transition-shadow duration-200 ${
-              result.entity_type === "artist" ? "rounded-full" : "rounded-lg"
-            }`}
-          />
-        ) : (
-          <div
-            className={`w-16 h-16 bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center shadow-md ${
-              result.entity_type === "artist" ? "rounded-full" : "rounded-lg"
-            }`}
-          >
-            <EntityIcon type={result.entity_type} />
-          </div>
-        )}
+      <CoverArt
+        src={result.image_url}
+        alt={result.name}
+        size="xs"
+        shape={isArtist ? "circle" : "rounded"}
+        fallbackIcon={result.entity_type === "all" ? "track" : result.entity_type}
+        className={isArtist ? undefined : "rounded-md"}
+      />
 
-        {/* Entity type badge */}
-        <div className="absolute -bottom-1 -right-1">
-          <Badge variant="default" size="sm" className="text-[10px] px-1.5 py-0.5">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-medium uppercase tracking-wider text-faint">
             {entityTypeLabels[result.entity_type]}
-          </Badge>
+          </span>
+          <PlatformDots platforms={result.platforms} />
         </div>
-      </div>
-
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-zinc-100 truncate group-hover:text-white transition-colors">
+        <p className="truncate font-medium text-foreground transition-colors group-hover:text-primary">
           {result.name}
-        </h3>
+        </p>
         {result.subtitle && (
-          <p className="text-sm text-zinc-400 truncate mt-0.5">{result.subtitle}</p>
-        )}
-        {result.platforms && result.platforms.length > 0 && (
-          <div className="mt-2">
-            <PlatformBadges platforms={result.platforms} />
-          </div>
+          <p className="truncate text-sm text-muted-foreground">{result.subtitle}</p>
         )}
       </div>
 
-      {/* Arrow */}
-      <svg
-        className="w-5 h-5 text-zinc-600 group-hover:text-zinc-400 group-hover:translate-x-0.5 transition-all duration-200 shrink-0"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-      </svg>
-    </a>
-  );
-}
+      {result.duration ? (
+        <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground tnum">
+          {formatDuration(result.duration)}
+        </span>
+      ) : null}
 
-function EntityIcon({ type }: { type: EntityType }) {
-  switch (type) {
-    case "artist":
-      return (
-        <svg className="w-7 h-7 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-        </svg>
-      );
-    case "album":
-      return (
-        <svg className="w-7 h-7 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-        </svg>
-      );
-    case "playlist":
-      return (
-        <svg className="w-7 h-7 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-        </svg>
-      );
-    case "track":
-    default:
-      return (
-        <svg className="w-7 h-7 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-        </svg>
-      );
-  }
+      {showAction && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onAddToQueue?.(result);
+          }}
+          aria-label={result.entity_type === "track" ? "Add to queue" : "Download"}
+          className={cn(
+            "flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground",
+            "opacity-0 transition-all group-hover:opacity-100",
+            "hover:bg-accent hover:text-accent-foreground",
+            "focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          )}
+        >
+          {result.entity_type === "track" ? <Plus className="size-4" /> : <Download className="size-4" />}
+        </button>
+      )}
+
+      <ChevronRight className="size-4 shrink-0 text-faint transition-colors group-hover:text-muted-foreground" />
+    </div>
+  );
 }

@@ -1,6 +1,9 @@
-import { clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
-import type { ScoreLevel } from "@/types";
+import { cn } from "@/lib/utils";
+import { Meter, scoreColor } from "./meter";
+
+function clampScore(score: number): number {
+  return Math.min(100, Math.max(0, score));
+}
 
 export interface MatchScoreGaugeProps {
   /** Score value from 0 to 100 */
@@ -15,32 +18,15 @@ export interface MatchScoreGaugeProps {
   className?: string;
 }
 
-const sizeConfig = {
-  sm: { size: 48, strokeWidth: 4, fontSize: "text-xs" },
-  md: { size: 64, strokeWidth: 5, fontSize: "text-sm" },
-  lg: { size: 96, strokeWidth: 6, fontSize: "text-lg" },
+const gaugeConfig = {
+  sm: { cells: 12, meter: "sm" as const, value: "text-sm", gap: "gap-1" },
+  md: { cells: 16, meter: "md" as const, value: "text-xl", gap: "gap-1.5" },
+  lg: { cells: 20, meter: "lg" as const, value: "text-3xl", gap: "gap-2" },
 };
 
-function getScoreLevel(score: number): ScoreLevel {
-  if (score >= 90) return "high";
-  if (score >= 70) return "medium";
-  return "low";
-}
-
-function getScoreColor(level: ScoreLevel): string {
-  switch (level) {
-    case "high":
-      return "var(--accent-safe)";
-    case "medium":
-      return "var(--accent-warm)";
-    case "low":
-      return "var(--accent-peak)";
-  }
-}
-
 /**
- * Circular gauge visualization for match scores
- * Uses VU meter-inspired color coding: green (90+), yellow (70-89), red (<70)
+ * Match-quality readout rendered in the Control Room meter language: a score
+ * number over a segmented meter, colored by `scoreColor`. No radial gauge.
  */
 export function MatchScoreGauge({
   score,
@@ -49,80 +35,36 @@ export function MatchScoreGauge({
   animated = true,
   className,
 }: MatchScoreGaugeProps) {
-  const config = sizeConfig[size];
-  const radius = (config.size - config.strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const normalizedScore = Math.min(100, Math.max(0, score));
-  const strokeDashoffset = circumference * (1 - normalizedScore / 100);
-  const level = getScoreLevel(normalizedScore);
-  const color = getScoreColor(level);
+  const value = clampScore(score);
+  const color = scoreColor(value);
+  const config = gaugeConfig[size];
 
   return (
     <div
-      className={twMerge(
-        clsx("score-gauge relative inline-flex items-center justify-center"),
-        className
-      )}
-      data-score={level}
-      style={{ "--score": normalizedScore, "--score-color": color } as React.CSSProperties}
+      className={cn("inline-flex flex-col items-center", config.gap, animated && "animate-fade-in", className)}
+      data-score={value}
     >
-      <svg
-        width={config.size}
-        height={config.size}
-        viewBox={`0 0 ${config.size} ${config.size}`}
-        className="transform -rotate-90"
-      >
-        {/* Background track */}
-        <circle
-          cx={config.size / 2}
-          cy={config.size / 2}
-          r={radius}
-          fill="none"
-          stroke="var(--bg-surface)"
-          strokeWidth={config.strokeWidth}
-        />
-        {/* Score arc */}
-        <circle
-          cx={config.size / 2}
-          cy={config.size / 2}
-          r={radius}
-          fill="none"
-          stroke={color}
-          strokeWidth={config.strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          className={clsx(
-            animated && "animate-[scoreGaugeFill_1s_ease-out_forwards]"
-          )}
-          style={{
-            "--initial-offset": circumference,
-            transition: animated ? undefined : "stroke-dashoffset 0.3s ease-out",
-          } as React.CSSProperties}
-        />
-      </svg>
-
-      {/* Center label */}
       {showLabel && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span
-            className={clsx(
-              "font-mono font-semibold",
-              config.fontSize
-            )}
-            style={{ color }}
-          >
-            {Math.round(normalizedScore)}
-          </span>
-        </div>
+        <span
+          className={cn("font-mono font-semibold tnum leading-none", config.value)}
+          style={{ color }}
+        >
+          {Math.round(value)}
+        </span>
       )}
+      <Meter
+        value={value}
+        max={100}
+        cells={config.cells}
+        color={color}
+        size={config.meter}
+        className="w-full min-w-16"
+        label={`Match score ${Math.round(value)} percent`}
+      />
     </div>
   );
 }
 
-/**
- * Horizontal bar version of the match score gauge
- */
 export interface MatchScoreBarProps {
   score: number;
   showLabel?: boolean;
@@ -130,81 +72,64 @@ export interface MatchScoreBarProps {
   className?: string;
 }
 
+/** Horizontal match-score meter row with optional label and percentage. */
 export function MatchScoreBar({
   score,
   showLabel = false,
   showPercentage = true,
   className,
 }: MatchScoreBarProps) {
-  const normalizedScore = Math.min(100, Math.max(0, score));
-  const level = getScoreLevel(normalizedScore);
-  const color = getScoreColor(level);
+  const value = clampScore(score);
+  const color = scoreColor(value);
 
   return (
-    <div className={twMerge("w-full", className)}>
+    <div className={cn("w-full", className)}>
       {(showLabel || showPercentage) && (
-        <div className="flex items-center justify-between mb-1">
+        <div className="mb-1 flex items-center justify-between">
           {showLabel && (
-            <span className="text-xs text-[var(--color-text-muted)]">
-              Match Score
+            <span className="text-xs font-medium uppercase tracking-wider text-faint">
+              Match score
             </span>
           )}
           {showPercentage && (
-            <span
-              className="text-xs font-mono font-medium"
-              style={{ color }}
-            >
-              {Math.round(normalizedScore)}%
+            <span className="font-mono text-xs font-medium tnum" style={{ color }}>
+              {Math.round(value)}%
             </span>
           )}
         </div>
       )}
-      <div className="h-2 bg-[var(--bg-surface)] rounded-full overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all duration-500 ease-out"
-          style={{
-            width: `${normalizedScore}%`,
-            backgroundColor: color,
-          }}
-        />
-      </div>
+      <Meter
+        value={value}
+        max={100}
+        cells={16}
+        color={color}
+        size="md"
+        label={`Match score ${Math.round(value)} percent`}
+      />
     </div>
   );
 }
 
-/**
- * Compact score badge for use in lists
- */
 export interface ScoreBadgeProps {
   score: number;
   className?: string;
 }
 
+/** Compact score pill for lists; hue follows `scoreColor`. */
 export function ScoreBadge({ score, className }: ScoreBadgeProps) {
-  const normalizedScore = Math.min(100, Math.max(0, score));
-  const level = getScoreLevel(normalizedScore);
-  const color = getScoreColor(level);
-
-  const bgColorClass = clsx({
-    "bg-[var(--accent-safe)]/10": level === "high",
-    "bg-[var(--accent-warm)]/10": level === "medium",
-    "bg-[var(--accent-peak)]/10": level === "low",
-  });
+  const value = clampScore(score);
+  const color = scoreColor(value);
 
   return (
     <span
-      className={twMerge(
-        clsx(
-          "inline-flex items-center justify-center",
-          "px-2 py-0.5 rounded-full",
-          "text-xs font-mono font-semibold",
-          bgColorClass
-        ),
+      className={cn(
+        "inline-flex items-center justify-center rounded-full px-2 py-0.5",
+        "font-mono text-xs font-semibold tnum",
         className
       )}
-      style={{ color }}
+      style={{ color, backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)` }}
     >
-      {Math.round(normalizedScore)}%
+      {Math.round(value)}%
     </span>
   );
 }

@@ -1,6 +1,6 @@
 import { forwardRef, type InputHTMLAttributes } from "react";
-import { clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { AlertCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   error?: string;
@@ -14,36 +14,30 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full">
         {label && (
-          <label
-            htmlFor={inputId}
-            className="block text-sm font-medium text-zinc-300 mb-2"
-          >
+          <label htmlFor={inputId} className="mb-1.5 block text-sm font-medium text-foreground">
             {label}
           </label>
         )}
         <input
           ref={ref}
           id={inputId}
-          className={twMerge(
-            clsx(
-              "w-full px-4 py-3 rounded-xl text-zinc-100 text-sm",
-              "bg-[#18181b] border placeholder-zinc-500",
-              "transition-all duration-200",
-              "focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50",
-              "disabled:opacity-50 disabled:cursor-not-allowed",
-              error
-                ? "border-red-500/50 focus:ring-red-500/50 focus:border-red-500/50"
-                : "border-zinc-800 hover:border-zinc-700",
-              className
-            )
+          aria-invalid={error ? true : undefined}
+          className={cn(
+            "flex h-9 w-full rounded-md border bg-surface px-3 py-1 text-sm text-foreground",
+            "placeholder:text-faint",
+            "transition-colors outline-none",
+            "focus-visible:ring-2 focus-visible:ring-ring/40",
+            "disabled:cursor-not-allowed disabled:opacity-50",
+            error
+              ? "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/40"
+              : "border-input focus-visible:border-ring",
+            className
           )}
           {...props}
         />
         {error && (
-          <p className="mt-2 text-sm text-red-400 flex items-center gap-1.5">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+          <p className="mt-1.5 flex items-center gap-1.5 text-sm text-destructive">
+            <AlertCircle className="size-4 shrink-0" />
             {error}
           </p>
         )}

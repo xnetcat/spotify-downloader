@@ -1,15 +1,17 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
+import { motion } from "motion/react";
+import { Search } from "lucide-react";
 import { useAuthStore } from "@/stores/auth";
 import { useAdminUsers, useUpdateAdminUser } from "@/api";
 import {
-  Card,
-  CardContent,
   Badge,
   Button,
   Input,
   Select,
   Spinner,
+  Alert,
+  AlertTitle,
 } from "@/components/ui";
 import { useToast } from "@/components/ui/toast";
 import type { AdminUserListRequest } from "@/types";
@@ -17,6 +19,8 @@ import type { AdminUserListRequest } from "@/types";
 export const Route = createFileRoute("/admin/users")({
   component: AdminUsersPage,
 });
+
+const TH = "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-faint";
 
 function AdminUsersPage() {
   const navigate = useNavigate();
@@ -34,7 +38,6 @@ function AdminUsersPage() {
   const { data, isLoading, error } = useAdminUsers(filters);
   const updateUserMutation = useUpdateAdminUser();
 
-  // Redirect non-admins
   useEffect(() => {
     if (!isAuthenticated) {
       navigate({ to: "/auth/login" });
@@ -45,33 +48,23 @@ function AdminUsersPage() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setFilters((prev) => ({
-      ...prev,
-      search: searchInput || undefined,
-      page: 1,
-    }));
+    setFilters((prev) => ({ ...prev, search: searchInput || undefined, page: 1 }));
   };
 
   const handleToggleAdmin = async (userId: string, currentValue: boolean) => {
     try {
-      await updateUserMutation.mutateAsync({
-        userId,
-        data: { is_admin: !currentValue },
-      });
+      await updateUserMutation.mutateAsync({ userId, data: { is_admin: !currentValue } });
       addToast(`User ${currentValue ? "demoted from" : "promoted to"} admin`, "success");
-    } catch (err) {
+    } catch {
       addToast("Failed to update user", "error");
     }
   };
 
   const handleToggleActive = async (userId: string, currentValue: boolean) => {
     try {
-      await updateUserMutation.mutateAsync({
-        userId,
-        data: { is_active: !currentValue },
-      });
+      await updateUserMutation.mutateAsync({ userId, data: { is_active: !currentValue } });
       addToast(`User ${currentValue ? "disabled" : "enabled"}`, "success");
-    } catch (err) {
+    } catch {
       addToast("Failed to update user", "error");
     }
   };
@@ -85,32 +78,39 @@ function AdminUsersPage() {
   }
 
   return (
-    <div className="space-y-6 animate-slide-up">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-zinc-50">User Management</h1>
-          <p className="text-zinc-400 mt-1">
-            {data?.total || 0} total users
-          </p>
-        </div>
-      </div>
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+      className="space-y-6"
+    >
+      <header>
+        <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
+          User management
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          <span className="font-mono tabular-nums text-foreground">{data?.total || 0}</span> total
+          users
+        </p>
+      </header>
 
-      {/* Filters */}
-      <form onSubmit={handleSearch} className="flex items-center gap-3 flex-wrap">
-        <div className="flex-1 min-w-[200px] max-w-sm">
+      {/* Toolbar */}
+      <form onSubmit={handleSearch} className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-[200px] flex-1 sm:max-w-xs">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
           <Input
             type="text"
-            placeholder="Search by username or email..."
+            placeholder="Search username or email…"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
+            className="pl-9"
           />
         </div>
         <Select
           options={[
-            { value: "", label: "All Users" },
-            { value: "true", label: "Admins Only" },
-            { value: "false", label: "Non-Admins" },
+            { value: "", label: "All users" },
+            { value: "true", label: "Admins only" },
+            { value: "false", label: "Non-admins" },
           ]}
           value={filters.is_admin?.toString() || ""}
           onChange={(e) =>
@@ -120,11 +120,11 @@ function AdminUsersPage() {
               page: 1,
             }))
           }
-          className="w-32"
+          className="w-36"
         />
         <Select
           options={[
-            { value: "", label: "All Status" },
+            { value: "", label: "All status" },
             { value: "true", label: "Active" },
             { value: "false", label: "Inactive" },
           ]}
@@ -136,113 +136,88 @@ function AdminUsersPage() {
               page: 1,
             }))
           }
-          className="w-32"
+          className="w-36"
         />
         <Select
           options={[
-            { value: "created_at", label: "Join Date" },
+            { value: "created_at", label: "Join date" },
             { value: "username", label: "Username" },
             { value: "reputation_score", label: "Reputation" },
           ]}
           value={filters.sort_by || "created_at"}
           onChange={(e) =>
-            setFilters((prev) => ({
-              ...prev,
-              sort_by: e.target.value as any,
-            }))
+            setFilters((prev) => ({ ...prev, sort_by: e.target.value as AdminUserListRequest["sort_by"] }))
           }
-          className="w-32"
+          className="w-36"
         />
-        <Button type="submit" size="sm">Search</Button>
+        <Button type="submit" size="sm">
+          Search
+        </Button>
       </form>
 
-      {/* Loading */}
       {isLoading && (
         <div className="flex justify-center py-12">
           <Spinner size="lg" />
         </div>
       )}
 
-      {/* Error */}
       {error && (
-        <Card variant="bordered" className="border-red-900/50">
-          <CardContent className="py-6 text-center">
-            <p className="text-accent-peak">Failed to load users</p>
-          </CardContent>
-        </Card>
+        <Alert variant="destructive">
+          <AlertTitle>Failed to load users</AlertTitle>
+        </Alert>
       )}
 
-      {/* User List */}
-      {!isLoading && !error && data && (
-        <Card variant="bordered">
+      {!isLoading && !error && data && data.users.length > 0 && (
+        <div className="overflow-hidden rounded-lg border border-border bg-card">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="border-b border-zinc-800">
-                <tr>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-zinc-400">
-                    User
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-zinc-400">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-zinc-400">
-                    Reputation
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-zinc-400">
-                    Activity
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-zinc-400">
-                    Joined
-                  </th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-zinc-400">
-                    Actions
-                  </th>
+              <thead className="bg-surface">
+                <tr className="border-b border-border">
+                  <th className={TH}>User</th>
+                  <th className={TH}>Status</th>
+                  <th className={TH}>Reputation</th>
+                  <th className={TH}>Activity</th>
+                  <th className={TH}>Joined</th>
+                  <th className={`${TH} text-right`}>Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-800/50">
+              <tbody>
                 {data.users.map((u) => (
-                  <tr key={u.id} className="hover:bg-zinc-800/30 transition-colors">
+                  <tr key={u.id} className="border-t border-border transition-colors hover:bg-elevated/50">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent-needle to-accent-warm flex items-center justify-center text-sm font-bold text-white">
+                        <div className="flex size-8 items-center justify-center rounded-md bg-elevated font-mono text-sm font-semibold text-foreground">
                           {u.username.charAt(0).toUpperCase()}
                         </div>
-                        <div>
-                          <p className="font-medium text-zinc-200">{u.username}</p>
-                          <p className="text-sm text-zinc-500">{u.email}</p>
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-foreground">{u.username}</p>
+                          <p className="truncate text-sm text-muted-foreground">{u.email}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        {u.is_admin && (
-                          <Badge variant="warning" size="sm">Admin</Badge>
-                        )}
-                        <Badge
-                          variant={u.is_active ? "success" : "error"}
-                          size="sm"
-                        >
+                        {u.is_admin && <Badge variant="warning" size="sm">Admin</Badge>}
+                        <Badge variant={u.is_active ? "success" : "error"} size="sm">
                           {u.is_active ? "Active" : "Inactive"}
                         </Badge>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="font-mono text-zinc-300">
+                      <span className="font-mono tabular-nums text-foreground">
                         {u.reputation_score}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="text-sm text-zinc-400">
-                        <p>{u.matches_submitted} matches</p>
-                        <p>{u.votes_cast} votes</p>
-                      </div>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
+                      <p>{u.matches_submitted} matches</p>
+                      <p>{u.votes_cast} votes</p>
                     </td>
-                    <td className="px-4 py-3 text-sm text-zinc-400">
+                    <td className="px-4 py-3 font-mono text-sm tabular-nums text-muted-foreground">
                       {new Date(u.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
-                        {u.id !== user.id && (
+                        {u.id !== user.id ? (
                           <>
                             <Button
                               size="sm"
@@ -250,7 +225,7 @@ function AdminUsersPage() {
                               onClick={() => handleToggleAdmin(u.id, u.is_admin)}
                               isLoading={updateUserMutation.isPending}
                             >
-                              {u.is_admin ? "Remove Admin" : "Make Admin"}
+                              {u.is_admin ? "Remove admin" : "Make admin"}
                             </Button>
                             <Button
                               size="sm"
@@ -261,8 +236,7 @@ function AdminUsersPage() {
                               {u.is_active ? "Disable" : "Enable"}
                             </Button>
                           </>
-                        )}
-                        {u.id === user.id && (
+                        ) : (
                           <Badge variant="muted" size="sm">You</Badge>
                         )}
                       </div>
@@ -273,10 +247,9 @@ function AdminUsersPage() {
             </table>
           </div>
 
-          {/* Pagination */}
           {data.total_pages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-800">
-              <p className="text-sm text-zinc-400">
+            <div className="flex items-center justify-between border-t border-border px-4 py-3">
+              <p className="font-mono text-sm tabular-nums text-muted-foreground">
                 Page {data.page} of {data.total_pages}
               </p>
               <div className="flex gap-2">
@@ -284,9 +257,7 @@ function AdminUsersPage() {
                   size="sm"
                   variant="outline"
                   disabled={data.page <= 1}
-                  onClick={() =>
-                    setFilters((prev) => ({ ...prev, page: (prev.page || 1) - 1 }))
-                  }
+                  onClick={() => setFilters((prev) => ({ ...prev, page: (prev.page || 1) - 1 }))}
                 >
                   Previous
                 </Button>
@@ -294,26 +265,21 @@ function AdminUsersPage() {
                   size="sm"
                   variant="outline"
                   disabled={data.page >= data.total_pages}
-                  onClick={() =>
-                    setFilters((prev) => ({ ...prev, page: (prev.page || 1) + 1 }))
-                  }
+                  onClick={() => setFilters((prev) => ({ ...prev, page: (prev.page || 1) + 1 }))}
                 >
                   Next
                 </Button>
               </div>
             </div>
           )}
-        </Card>
+        </div>
       )}
 
-      {/* Empty State */}
       {!isLoading && !error && data?.users.length === 0 && (
-        <Card variant="bordered">
-          <CardContent className="py-12 text-center">
-            <p className="text-zinc-400">No users found</p>
-          </CardContent>
-        </Card>
+        <div className="rounded-lg border border-border bg-card py-12 text-center text-sm text-muted-foreground">
+          No users found
+        </div>
       )}
-    </div>
+    </motion.div>
   );
 }

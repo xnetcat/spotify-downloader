@@ -1,7 +1,14 @@
-import { useEffect, useCallback, useRef } from "react";
-import { createPortal } from "react-dom";
-import { clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { type ReactNode } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "./dialog";
+import { Button } from "./button";
+import { cn } from "@/lib/utils";
 
 export interface ModalProps {
   /** Whether the modal is open */
@@ -21,27 +28,20 @@ export interface ModalProps {
   /** Show close button */
   showCloseButton?: boolean;
   /** Modal content */
-  children: React.ReactNode;
+  children: ReactNode;
   /** Footer content (buttons, etc.) */
-  footer?: React.ReactNode;
+  footer?: ReactNode;
   /** Additional class names for modal container */
   className?: string;
 }
 
-const sizeClasses = {
+const sizeClasses: Record<NonNullable<ModalProps["size"]>, string> = {
   sm: "max-w-sm",
   md: "max-w-md",
   lg: "max-w-lg",
   xl: "max-w-xl",
   full: "max-w-4xl",
 };
-
-// Close icon
-const CloseIcon = () => (
-  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-  </svg>
-);
 
 export function Modal({
   isOpen,
@@ -56,122 +56,29 @@ export function Modal({
   footer,
   className,
 }: ModalProps) {
-  const modalRef = useRef<HTMLDivElement>(null);
-  const previousActiveElement = useRef<HTMLElement | null>(null);
-
-  // Handle escape key
-  const handleEscape = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === "Escape" && closeOnEscape) {
-        onClose();
-      }
-    },
-    [closeOnEscape, onClose]
-  );
-
-  // Handle backdrop click
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget && closeOnBackdropClick) {
-      onClose();
-    }
-  };
-
-  // Focus management
-  useEffect(() => {
-    if (isOpen) {
-      previousActiveElement.current = document.activeElement as HTMLElement;
-      modalRef.current?.focus();
-
-      document.addEventListener("keydown", handleEscape);
-      document.body.style.overflow = "hidden";
-
-      return () => {
-        document.removeEventListener("keydown", handleEscape);
-        document.body.style.overflow = "";
-        previousActiveElement.current?.focus();
-      };
-    }
-  }, [isOpen, handleEscape]);
-
-  if (!isOpen) return null;
-
-  const modalContent = (
-    <div
-      className="modal-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4"
-      onClick={handleBackdropClick}
-      aria-modal="true"
-      role="dialog"
-      aria-labelledby={title ? "modal-title" : undefined}
-      aria-describedby={description ? "modal-description" : undefined}
-    >
-      <div
-        ref={modalRef}
-        tabIndex={-1}
-        className={twMerge(
-          clsx(
-            "modal relative w-full",
-            "bg-[var(--bg-panel)] border border-[var(--color-border)]",
-            "rounded-2xl shadow-2xl",
-            "animate-scale-in",
-            "outline-none",
-            sizeClasses[size]
-          ),
-          className
-        )}
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        hideClose={!showCloseButton}
+        className={cn(sizeClasses[size], className)}
+        onEscapeKeyDown={(e) => {
+          if (!closeOnEscape) e.preventDefault();
+        }}
+        onInteractOutside={(e) => {
+          if (!closeOnBackdropClick) e.preventDefault();
+        }}
       >
-        {/* Header */}
-        {(title || showCloseButton) && (
-          <div className="modal-header flex items-start justify-between p-6 pb-0">
-            <div className="flex-1 pr-4">
-              {title && (
-                <h2
-                  id="modal-title"
-                  className="text-xl font-semibold text-[var(--color-text-primary)]"
-                >
-                  {title}
-                </h2>
-              )}
-              {description && (
-                <p
-                  id="modal-description"
-                  className="mt-1 text-sm text-[var(--color-text-muted)]"
-                >
-                  {description}
-                </p>
-              )}
-            </div>
-            {showCloseButton && (
-              <button
-                onClick={onClose}
-                className={clsx(
-                  "p-1.5 rounded-lg",
-                  "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]",
-                  "hover:bg-[var(--bg-hover)]",
-                  "transition-colors duration-150",
-                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-safe)]"
-                )}
-                aria-label="Close modal"
-              >
-                <CloseIcon />
-              </button>
-            )}
-          </div>
+        {(title || description) && (
+          <DialogHeader>
+            {title && <DialogTitle>{title}</DialogTitle>}
+            {description && <DialogDescription>{description}</DialogDescription>}
+          </DialogHeader>
         )}
-
-        {/* Body */}
-        <div className="modal-body p-6">{children}</div>
-
-        {/* Footer */}
-        {footer && (
-          <div className="modal-footer flex items-center justify-end gap-3 p-6 pt-0 border-t border-[var(--color-border-subtle)]">
-            {footer}
-          </div>
-        )}
-      </div>
-    </div>
+        <div className="text-sm text-foreground">{children}</div>
+        {footer && <DialogFooter>{footer}</DialogFooter>}
+      </DialogContent>
+    </Dialog>
   );
-
-  return createPortal(modalContent, document.body);
 }
 
 /**
@@ -200,21 +107,6 @@ export function ConfirmModal({
   variant = "default",
   isLoading = false,
 }: ConfirmModalProps) {
-  const confirmButtonClasses = clsx(
-    "px-4 py-2 rounded-xl font-medium text-sm",
-    "transition-all duration-200",
-    "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-panel)]",
-    {
-      "bg-[var(--accent-peak)] hover:bg-red-500 text-white focus-visible:ring-[var(--accent-peak)]":
-        variant === "danger",
-      "bg-[var(--accent-warm)] hover:bg-amber-400 text-black focus-visible:ring-[var(--accent-warm)]":
-        variant === "warning",
-      "bg-[var(--accent-safe)] hover:bg-emerald-400 text-white focus-visible:ring-[var(--accent-safe)]":
-        variant === "default",
-    },
-    isLoading && "opacity-50 cursor-not-allowed"
-  );
-
   return (
     <Modal
       isOpen={isOpen}
@@ -223,30 +115,25 @@ export function ConfirmModal({
       size="sm"
       footer={
         <>
-          <button
-            onClick={onClose}
-            disabled={isLoading}
-            className={clsx(
-              "px-4 py-2 rounded-xl font-medium text-sm",
-              "bg-[var(--bg-surface)] text-[var(--color-text-secondary)]",
-              "hover:bg-[var(--bg-hover)] hover:text-[var(--color-text-primary)]",
-              "transition-colors duration-150",
-              "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-border)]"
-            )}
-          >
+          <Button variant="outline" onClick={onClose} disabled={isLoading}>
             {cancelText}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant={variant === "danger" ? "danger" : "primary"}
+            className={
+              variant === "warning"
+                ? "bg-warning text-primary-foreground hover:bg-warning/85"
+                : undefined
+            }
             onClick={onConfirm}
-            disabled={isLoading}
-            className={confirmButtonClasses}
+            isLoading={isLoading}
           >
-            {isLoading ? "Loading..." : confirmText}
-          </button>
+            {confirmText}
+          </Button>
         </>
       }
     >
-      <p className="text-[var(--color-text-secondary)]">{message}</p>
+      <p className="text-muted-foreground">{message}</p>
     </Modal>
   );
 }

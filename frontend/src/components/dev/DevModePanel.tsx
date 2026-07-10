@@ -22,7 +22,10 @@ function getStoredPosition(): Position {
   } catch {
     // Ignore
   }
-  return { x: 20, y: 20 };
+  // Bottom-right by default so the pill stays clear of the sidebar wordmark
+  const fallbackY = typeof window !== "undefined" ? window.innerHeight - 60 : 20;
+  const fallbackX = typeof window !== "undefined" ? window.innerWidth - 110 : 20;
+  return { x: fallbackX, y: fallbackY };
 }
 
 function storePosition(pos: Position) {
@@ -122,18 +125,18 @@ export function DevModePanel() {
             "cursor-grab active:cursor-grabbing",
             "transition-all duration-200",
             isOverridden
-              ? "bg-amber-500/20 border border-amber-500/40 text-amber-300"
-              : "bg-zinc-800/80 border border-zinc-700/50 text-zinc-400"
+              ? "bg-primary/15 border border-primary/40 text-primary"
+              : "bg-elevated/90 border border-border text-muted-foreground"
           )}
         >
           <span
             className={clsx(
               "w-2 h-2 rounded-full",
-              currentMode === "self-hosted" ? "bg-green-500" : "bg-amber-500"
+              currentMode === "self-hosted" ? "bg-success" : "bg-warning"
             )}
           />
           <span>DEV</span>
-          {isOverridden && <span className="text-amber-400">*</span>}
+          {isOverridden && <span className="text-primary">*</span>}
         </button>
       )}
 
@@ -146,15 +149,15 @@ export function DevModePanel() {
             "backdrop-blur-md",
             "transition-all duration-200",
             isOverridden
-              ? "bg-zinc-900/95 border-2 border-amber-500/50"
-              : "bg-zinc-900/95 border border-zinc-700/50"
+              ? "bg-popover/95 border-2 border-primary/50"
+              : "bg-popover/95 border border-border"
           )}
         >
           {/* Header */}
           <div
             className={clsx(
               "flex items-center justify-between px-3 py-2",
-              "border-b border-zinc-700/50",
+              "border-b border-border",
               "cursor-grab active:cursor-grabbing"
             )}
           >
@@ -162,21 +165,21 @@ export function DevModePanel() {
               <div
                 className={clsx(
                   "w-2 h-2 rounded-full",
-                  currentMode === "self-hosted" ? "bg-green-500" : "bg-amber-500"
+                  currentMode === "self-hosted" ? "bg-success" : "bg-warning"
                 )}
               />
-              <span className="text-xs font-semibold text-zinc-300">
+              <span className="text-xs font-semibold text-foreground">
                 Dev Mode
               </span>
               {isOverridden && (
-                <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-amber-500/20 text-amber-400">
+                <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-primary/15 text-primary">
                   OVERRIDE
                 </span>
               )}
             </div>
             <button
               onClick={() => setIsExpanded(false)}
-              className="p-1 rounded hover:bg-zinc-700/50 text-zinc-500 hover:text-zinc-300 transition-colors"
+              className="p-1 rounded hover:bg-elevated text-faint hover:text-foreground transition-colors"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -188,7 +191,7 @@ export function DevModePanel() {
           <div className="p-3 space-y-3">
             {/* Mode selector */}
             <div className="space-y-1.5">
-              <label className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">
+              <label className="text-[10px] font-medium text-faint uppercase tracking-wider">
                 Deployment Mode
               </label>
               <div className="flex gap-1">
@@ -205,8 +208,8 @@ export function DevModePanel() {
                         "flex-1 px-2 py-1.5 rounded-lg text-xs font-medium",
                         "transition-all duration-150",
                         isActive
-                          ? "bg-[var(--accent-safe)] text-white"
-                          : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-300"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-elevated text-muted-foreground hover:text-foreground"
                       )}
                     >
                       {opt.label}
@@ -218,7 +221,7 @@ export function DevModePanel() {
 
             {/* Feature indicators */}
             <div className="space-y-1.5">
-              <label className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">
+              <label className="text-[10px] font-medium text-faint uppercase tracking-wider">
                 Active Features
               </label>
               <div className="grid grid-cols-2 gap-1.5 text-[10px]">
@@ -239,7 +242,7 @@ export function DevModePanel() {
                 onClick={() => setModeOverride(null)}
                 className={clsx(
                   "w-full px-3 py-1.5 rounded-lg text-xs font-medium",
-                  "bg-amber-500/20 text-amber-400 hover:bg-amber-500/30",
+                  "bg-primary/15 text-primary hover:bg-primary/25",
                   "transition-colors"
                 )}
               >
@@ -249,8 +252,8 @@ export function DevModePanel() {
           </div>
 
           {/* Footer */}
-          <div className="px-3 py-2 border-t border-zinc-700/50">
-            <p className="text-[10px] text-zinc-600">
+          <div className="px-3 py-2 border-t border-border">
+            <p className="text-[10px] text-faint">
               Env: {baseConfig.mode} • Effective: {currentMode}
             </p>
           </div>
@@ -270,9 +273,9 @@ function FeatureIndicator({
   variant?: "default" | "green" | "amber";
 }) {
   const colors = {
-    default: enabled ? "bg-green-500/20 text-green-400" : "bg-zinc-700/50 text-zinc-500",
-    green: "bg-green-500/20 text-green-400",
-    amber: "bg-amber-500/20 text-amber-400",
+    default: enabled ? "bg-success/15 text-success" : "bg-elevated text-faint",
+    green: "bg-success/15 text-success",
+    amber: "bg-primary/15 text-primary",
   };
 
   return (
@@ -287,9 +290,9 @@ function FeatureIndicator({
           "w-1.5 h-1.5 rounded-full",
           enabled
             ? variant === "amber"
-              ? "bg-amber-500"
-              : "bg-green-500"
-            : "bg-zinc-500"
+              ? "bg-warning"
+              : "bg-success"
+            : "bg-faint"
         )}
       />
       <span>{label}</span>

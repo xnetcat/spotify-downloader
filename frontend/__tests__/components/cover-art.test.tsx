@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { CoverArt } from "../../src/components/ui/cover-art";
 
@@ -17,7 +17,6 @@ describe("CoverArt", () => {
       const { container } = render(<CoverArt src={null} alt="Test Album" />);
 
       expect(screen.queryByRole("img")).not.toBeInTheDocument();
-      // Should show fallback icon (SVG within the fallback div)
       const fallbackIcon = container.querySelector("svg");
       expect(fallbackIcon).toBeInTheDocument();
     });
@@ -87,7 +86,7 @@ describe("CoverArt", () => {
       const { container } = render(
         <CoverArt src="https://example.com/image.jpg" alt="Test" />
       );
-      expect(container.firstChild).toHaveClass("rounded-xl");
+      expect(container.firstChild).toHaveClass("rounded-md");
     });
 
     it("applies circle shape", () => {
@@ -103,7 +102,6 @@ describe("CoverArt", () => {
       const { container } = render(
         <CoverArt src={null} alt="Artist" fallbackIcon="artist" />
       );
-      // Should show fallback div with SVG
       const fallbackDiv = container.querySelector("svg");
       expect(fallbackDiv).toBeInTheDocument();
     });
@@ -134,18 +132,18 @@ describe("CoverArt", () => {
   });
 
   describe("image loading states", () => {
-    it("shows shimmer loading state while image is loading", () => {
+    it("shows loading placeholder while image is loading", () => {
       const { container } = render(
         <CoverArt src="https://example.com/image.jpg" alt="Test" />
       );
 
-      // Before onLoad, shimmer should be visible
-      const shimmer = container.querySelector(".shimmer");
-      expect(shimmer).toBeInTheDocument();
+      // Before onLoad, the pulsing placeholder should be visible
+      const placeholder = container.querySelector(".animate-pulse");
+      expect(placeholder).toBeInTheDocument();
     });
 
-    it("hides shimmer after image loads", async () => {
-      const { container } = render(
+    it("reveals image after it loads", async () => {
+      render(
         <CoverArt src="https://example.com/image.jpg" alt="Test" />
       );
 
@@ -166,7 +164,6 @@ describe("CoverArt", () => {
       fireEvent.error(img);
 
       await waitFor(() => {
-        // Image should be hidden and fallback should be shown
         const fallbackIcon = container.querySelector("svg");
         expect(fallbackIcon).toBeInTheDocument();
       });
@@ -239,7 +236,6 @@ describe("CoverArt", () => {
       fireEvent.click(screen.getByLabelText("Play Test Album"));
 
       expect(handlePlay).toHaveBeenCalledTimes(1);
-      // Should stop propagation
       expect(handleContainerClick).not.toHaveBeenCalled();
     });
 

@@ -1,69 +1,93 @@
+import { Moon, Sun, Monitor } from "lucide-react";
 import { useSettingsStore } from "@/stores/settings";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  ToggleSwitch,
-} from "@/components/ui";
-import { SectionHeader } from "./SectionHeader";
+import type { ThemePreference } from "@/stores/settings";
+import { Switch } from "@/components/ui";
+import { cn } from "@/lib/utils";
+import { SettingsSection, SettingRow } from "./SettingsSection";
 import { useSettingsContext } from "./SettingsContext";
 
-export function AppearanceSettings() {
-  const {
-    compactSidebar,
-    enableAnimations,
-    reduceMotion,
-  } = useSettingsStore();
+const THEME_OPTIONS: { value: ThemePreference; label: string; icon: typeof Moon }[] = [
+  { value: "dark", label: "Dark", icon: Moon },
+  { value: "light", label: "Light", icon: Sun },
+  { value: "system", label: "System", icon: Monitor },
+];
 
+function ThemeSegmented({
+  value,
+  onChange,
+}: {
+  value: ThemePreference;
+  onChange: (value: ThemePreference) => void;
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Theme"
+      className="inline-flex rounded-md border border-border bg-card p-0.5"
+    >
+      {THEME_OPTIONS.map(({ value: v, label, icon: Icon }) => {
+        const active = value === v;
+        return (
+          <button
+            key={v}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            onClick={() => onChange(v)}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-[calc(var(--radius)-4px)] px-3 py-1.5 text-xs font-medium transition-colors",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              active
+                ? "bg-elevated text-primary"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Icon className="size-4" />
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function AppearanceSettings() {
+  const { theme, compactSidebar, enableAnimations, reduceMotion } = useSettingsStore();
   const { changeSetting } = useSettingsContext();
 
   return (
-    <Card variant="bordered" className="animate-slide-up stagger-5">
-      <CardHeader>
-        <SectionHeader
-          icon={
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
-              />
-            </svg>
-          }
-          iconBg="bg-gradient-to-br from-pink-500/20 to-rose-500/20"
-          iconColor="text-pink-400"
-          title="Appearance"
-          description="Customize the look and feel"
+    <SettingsSection
+      id="appearance"
+      title="Appearance"
+      description="Theme, layout, and motion preferences."
+    >
+      <SettingRow label="Theme" help="Color scheme for the interface.">
+        <ThemeSegmented
+          value={theme}
+          onChange={(val) => changeSetting("theme", val, "Theme")}
         />
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <ToggleSwitch
+      </SettingRow>
+
+      <SettingRow label="Compact sidebar" help="Use the icon-only sidebar by default.">
+        <Switch
           checked={compactSidebar}
-          onChange={(val) => changeSetting("compactSidebar", val, "Compact sidebar")}
-          label="Compact sidebar"
-          description="Use icon-only sidebar by default"
+          onCheckedChange={(val) => changeSetting("compactSidebar", val, "Compact sidebar")}
         />
+      </SettingRow>
 
-        <ToggleSwitch
+      <SettingRow label="Enable animations" help="Show transitions and meter effects.">
+        <Switch
           checked={enableAnimations}
-          onChange={(val) => changeSetting("enableAnimations", val, "Enable animations")}
-          label="Enable animations"
-          description="Show smooth transitions and VU meter effects"
+          onCheckedChange={(val) => changeSetting("enableAnimations", val, "Enable animations")}
         />
+      </SettingRow>
 
-        <ToggleSwitch
+      <SettingRow label="Reduce motion" help="Minimize animations for accessibility.">
+        <Switch
           checked={reduceMotion}
-          onChange={(val) => changeSetting("reduceMotion", val, "Reduce motion")}
-          label="Reduce motion"
-          description="Minimize animations for accessibility"
+          onCheckedChange={(val) => changeSetting("reduceMotion", val, "Reduce motion")}
         />
-      </CardContent>
-    </Card>
+      </SettingRow>
+    </SettingsSection>
   );
 }

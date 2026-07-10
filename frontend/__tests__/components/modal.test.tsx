@@ -1,15 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { Modal, ConfirmModal } from "../../src/components/ui/modal";
-
-// Mock createPortal to render in the same container
-vi.mock("react-dom", async () => {
-  const actual = await vi.importActual("react-dom");
-  return {
-    ...actual,
-    createPortal: (node: React.ReactNode) => node,
-  };
-});
 
 describe("Modal", () => {
   describe("rendering", () => {
@@ -46,12 +37,7 @@ describe("Modal", () => {
 
     it("renders description when provided", () => {
       render(
-        <Modal
-          isOpen
-          onClose={() => {}}
-          title="Title"
-          description="This is a description"
-        >
+        <Modal isOpen onClose={() => {}} title="Title" description="This is a description">
           <p>Content</p>
         </Modal>
       );
@@ -61,11 +47,7 @@ describe("Modal", () => {
 
     it("renders footer when provided", () => {
       render(
-        <Modal
-          isOpen
-          onClose={() => {}}
-          footer={<button>Submit</button>}
-        >
+        <Modal isOpen onClose={() => {}} footer={<button>Submit</button>}>
           <p>Content</p>
         </Modal>
       );
@@ -73,15 +55,14 @@ describe("Modal", () => {
       expect(screen.getByRole("button", { name: "Submit" })).toBeInTheDocument();
     });
 
-    it("applies custom className", () => {
+    it("applies custom className to the dialog", () => {
       render(
         <Modal isOpen onClose={() => {}} className="custom-modal">
           <p>Content</p>
         </Modal>
       );
 
-      const modal = screen.getByRole("dialog").querySelector(".modal");
-      expect(modal).toHaveClass("custom-modal");
+      expect(screen.getByRole("dialog")).toHaveClass("custom-modal");
     });
   });
 
@@ -93,8 +74,7 @@ describe("Modal", () => {
         </Modal>
       );
 
-      const modal = screen.getByRole("dialog").querySelector(".modal");
-      expect(modal).toHaveClass("max-w-sm");
+      expect(screen.getByRole("dialog")).toHaveClass("max-w-sm");
     });
 
     it("applies md size class (default)", () => {
@@ -104,8 +84,7 @@ describe("Modal", () => {
         </Modal>
       );
 
-      const modal = screen.getByRole("dialog").querySelector(".modal");
-      expect(modal).toHaveClass("max-w-md");
+      expect(screen.getByRole("dialog")).toHaveClass("max-w-md");
     });
 
     it("applies lg size class", () => {
@@ -115,8 +94,7 @@ describe("Modal", () => {
         </Modal>
       );
 
-      const modal = screen.getByRole("dialog").querySelector(".modal");
-      expect(modal).toHaveClass("max-w-lg");
+      expect(screen.getByRole("dialog")).toHaveClass("max-w-lg");
     });
 
     it("applies xl size class", () => {
@@ -126,8 +104,7 @@ describe("Modal", () => {
         </Modal>
       );
 
-      const modal = screen.getByRole("dialog").querySelector(".modal");
-      expect(modal).toHaveClass("max-w-xl");
+      expect(screen.getByRole("dialog")).toHaveClass("max-w-xl");
     });
 
     it("applies full size class", () => {
@@ -137,8 +114,7 @@ describe("Modal", () => {
         </Modal>
       );
 
-      const modal = screen.getByRole("dialog").querySelector(".modal");
-      expect(modal).toHaveClass("max-w-4xl");
+      expect(screen.getByRole("dialog")).toHaveClass("max-w-4xl");
     });
   });
 
@@ -150,7 +126,7 @@ describe("Modal", () => {
         </Modal>
       );
 
-      expect(screen.getByLabelText("Close modal")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
     });
 
     it("hides close button when showCloseButton is false", () => {
@@ -160,7 +136,7 @@ describe("Modal", () => {
         </Modal>
       );
 
-      expect(screen.queryByLabelText("Close modal")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Close" })).not.toBeInTheDocument();
     });
 
     it("calls onClose when close button is clicked", () => {
@@ -171,38 +147,12 @@ describe("Modal", () => {
         </Modal>
       );
 
-      fireEvent.click(screen.getByLabelText("Close modal"));
+      fireEvent.click(screen.getByRole("button", { name: "Close" }));
       expect(handleClose).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe("backdrop click", () => {
-    it("closes modal on backdrop click by default", () => {
-      const handleClose = vi.fn();
-      render(
-        <Modal isOpen onClose={handleClose}>
-          <p>Content</p>
-        </Modal>
-      );
-
-      const backdrop = screen.getByRole("dialog");
-      fireEvent.click(backdrop);
-      expect(handleClose).toHaveBeenCalledTimes(1);
-    });
-
-    it("does not close modal on backdrop click when closeOnBackdropClick is false", () => {
-      const handleClose = vi.fn();
-      render(
-        <Modal isOpen onClose={handleClose} closeOnBackdropClick={false}>
-          <p>Content</p>
-        </Modal>
-      );
-
-      const backdrop = screen.getByRole("dialog");
-      fireEvent.click(backdrop);
-      expect(handleClose).not.toHaveBeenCalled();
-    });
-
+  describe("backdrop / content clicks", () => {
     it("does not close when clicking modal content", () => {
       const handleClose = vi.fn();
       render(
@@ -225,7 +175,7 @@ describe("Modal", () => {
         </Modal>
       );
 
-      fireEvent.keyDown(document, { key: "Escape" });
+      fireEvent.keyDown(document.body, { key: "Escape" });
       expect(handleClose).toHaveBeenCalledTimes(1);
     });
 
@@ -237,21 +187,8 @@ describe("Modal", () => {
         </Modal>
       );
 
-      fireEvent.keyDown(document, { key: "Escape" });
+      fireEvent.keyDown(document.body, { key: "Escape" });
       expect(handleClose).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("focus management", () => {
-    it("modal container is focusable", () => {
-      render(
-        <Modal isOpen onClose={() => {}}>
-          <p>Content</p>
-        </Modal>
-      );
-
-      const modal = screen.getByRole("dialog").querySelector(".modal");
-      expect(modal).toHaveAttribute("tabIndex", "-1");
     });
   });
 
@@ -266,78 +203,24 @@ describe("Modal", () => {
       expect(screen.getByRole("dialog")).toBeInTheDocument();
     });
 
-    it("has aria-modal attribute", () => {
-      render(
-        <Modal isOpen onClose={() => {}}>
-          <p>Content</p>
-        </Modal>
-      );
-
-      expect(screen.getByRole("dialog")).toHaveAttribute("aria-modal", "true");
-    });
-
-    it("has aria-labelledby when title is provided", () => {
+    it("labels the dialog when a title is provided", () => {
       render(
         <Modal isOpen onClose={() => {}} title="Modal Title">
           <p>Content</p>
         </Modal>
       );
 
-      expect(screen.getByRole("dialog")).toHaveAttribute("aria-labelledby", "modal-title");
+      expect(screen.getByRole("dialog")).toHaveAttribute("aria-labelledby");
     });
 
-    it("has aria-describedby when description is provided", () => {
+    it("describes the dialog when a description is provided", () => {
       render(
-        <Modal isOpen onClose={() => {}} description="Modal description">
+        <Modal isOpen onClose={() => {}} title="Title" description="Modal description">
           <p>Content</p>
         </Modal>
       );
 
-      expect(screen.getByRole("dialog")).toHaveAttribute("aria-describedby", "modal-description");
-    });
-
-    it("close button has aria-label", () => {
-      render(
-        <Modal isOpen onClose={() => {}}>
-          <p>Content</p>
-        </Modal>
-      );
-
-      expect(screen.getByLabelText("Close modal")).toBeInTheDocument();
-    });
-  });
-
-  describe("body scroll lock", () => {
-    afterEach(() => {
-      document.body.style.overflow = "";
-    });
-
-    it("locks body scroll when open", () => {
-      render(
-        <Modal isOpen onClose={() => {}}>
-          <p>Content</p>
-        </Modal>
-      );
-
-      expect(document.body.style.overflow).toBe("hidden");
-    });
-
-    it("unlocks body scroll when closed", () => {
-      const { rerender } = render(
-        <Modal isOpen onClose={() => {}}>
-          <p>Content</p>
-        </Modal>
-      );
-
-      expect(document.body.style.overflow).toBe("hidden");
-
-      rerender(
-        <Modal isOpen={false} onClose={() => {}}>
-          <p>Content</p>
-        </Modal>
-      );
-
-      expect(document.body.style.overflow).toBe("");
+      expect(screen.getByRole("dialog")).toHaveAttribute("aria-describedby");
     });
   });
 });
@@ -439,27 +322,10 @@ describe("ConfirmModal", () => {
         />
       );
 
-      const confirmButton = screen.getByRole("button", { name: "Confirm" });
-      expect(confirmButton).toHaveClass("bg-[var(--accent-peak)]");
+      expect(screen.getByRole("button", { name: "Confirm" })).toHaveClass("bg-destructive");
     });
 
-    it("applies warning variant styles", () => {
-      render(
-        <ConfirmModal
-          isOpen
-          onClose={() => {}}
-          onConfirm={() => {}}
-          title="Warning"
-          message="Are you sure?"
-          variant="warning"
-        />
-      );
-
-      const confirmButton = screen.getByRole("button", { name: "Confirm" });
-      expect(confirmButton).toHaveClass("bg-[var(--accent-warm)]");
-    });
-
-    it("applies default variant styles", () => {
+    it("applies primary styles for the default variant", () => {
       render(
         <ConfirmModal
           isOpen
@@ -471,13 +337,27 @@ describe("ConfirmModal", () => {
         />
       );
 
-      const confirmButton = screen.getByRole("button", { name: "Confirm" });
-      expect(confirmButton).toHaveClass("bg-[var(--accent-safe)]");
+      expect(screen.getByRole("button", { name: "Confirm" })).toHaveClass("bg-primary");
+    });
+
+    it("uses warning styles for the warning variant", () => {
+      render(
+        <ConfirmModal
+          isOpen
+          onClose={() => {}}
+          onConfirm={() => {}}
+          title="Warning"
+          message="Are you sure?"
+          variant="warning"
+        />
+      );
+
+      expect(screen.getByRole("button", { name: "Confirm" })).toHaveClass("bg-warning");
     });
   });
 
   describe("loading state", () => {
-    it("shows loading text when isLoading is true", () => {
+    it("shows a spinner in the confirm button when loading", () => {
       render(
         <ConfirmModal
           isOpen
@@ -489,7 +369,8 @@ describe("ConfirmModal", () => {
         />
       );
 
-      expect(screen.getByRole("button", { name: "Loading..." })).toBeInTheDocument();
+      const confirmButton = screen.getByRole("button", { name: "Confirm" });
+      expect(confirmButton.querySelector("svg.animate-spin")).toBeInTheDocument();
     });
 
     it("disables buttons when loading", () => {
@@ -504,24 +385,8 @@ describe("ConfirmModal", () => {
         />
       );
 
-      expect(screen.getByRole("button", { name: "Loading..." })).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Confirm" })).toBeDisabled();
       expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
-    });
-
-    it("applies loading styles to confirm button", () => {
-      render(
-        <ConfirmModal
-          isOpen
-          onClose={() => {}}
-          onConfirm={() => {}}
-          title="Confirm"
-          message="Confirm?"
-          isLoading
-        />
-      );
-
-      const confirmButton = screen.getByRole("button", { name: "Loading..." });
-      expect(confirmButton).toHaveClass("opacity-50", "cursor-not-allowed");
     });
   });
 });

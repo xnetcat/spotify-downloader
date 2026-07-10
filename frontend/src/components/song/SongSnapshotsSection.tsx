@@ -1,12 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
-import {
-  useMetadataSnapshots,
-} from "@/api/entities";
-import {
-  Card,
-  CardContent,
-  Button,
-} from "@/components/ui";
+import { Columns3 } from "lucide-react";
+import { useMetadataSnapshots } from "@/api/entities";
+import { Button } from "@/components/ui";
 import { MetadataSourceSelector } from "@/components/ui/metadata-source-selector";
 import { MetadataComparisonTable } from "@/components/ui/metadata-comparison";
 import type { EnhancedSong, NormalizedMetadata } from "@/types";
@@ -50,9 +45,7 @@ export function SongSnapshotsSection({ songId, hasSong, onSnapshotChange }: Song
 
   const extendedSnapshotsInfo = useMemo(() => {
     const backendSnapshots = snapshotsData?.snapshots || [];
-    const allSources = Array.from(new Set([
-      ...(snapshotsData?.sources || []),
-    ]));
+    const allSources = Array.from(new Set([...(snapshotsData?.sources || [])]));
 
     return {
       snapshots: backendSnapshots,
@@ -80,59 +73,56 @@ export function SongSnapshotsSection({ songId, hasSong, onSnapshotChange }: Song
   }
 
   return (
-    <>
-      {/* Multi-Source Metadata Controls */}
-      <Card variant="bordered" className="overflow-hidden">
-        <CardContent className="py-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            {/* Source Selector */}
-            <MetadataSourceSelector
-              sources={extendedSnapshotsInfo.sources}
-              activeSource={activeMetadataSource || ""}
-              onSourceChange={setActiveMetadataSource}
-              snapshots={extendedSnapshotsInfo.snapshots as any}
-              showConfidence={true}
-              size="md"
-            />
+    <section className="space-y-4">
+      <div className="flex items-center justify-between gap-4 border-b border-border pb-2">
+        <h2 className="text-xs font-medium uppercase tracking-wider text-faint">Metadata sources</h2>
+        {extendedSnapshotsInfo.snapshots.length > 1 && (
+          <Button
+            variant={showComparison ? "primary" : "outline"}
+            size="sm"
+            onClick={() => setShowComparison(!showComparison)}
+          >
+            <Columns3 />
+            {showComparison ? "Hide comparison" : "Compare sources"}
+          </Button>
+        )}
+      </div>
 
-            {/* Compare Sources Button */}
-            {extendedSnapshotsInfo.snapshots.length > 1 && (
-              <Button
-                variant={showComparison ? "primary" : "outline"}
-                size="sm"
-                onClick={() => setShowComparison(!showComparison)}
-              >
-                <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
-                </svg>
-                {showComparison ? "Hide Comparison" : "Compare Sources"}
-              </Button>
-            )}
+      <div className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-4">
+        <MetadataSourceSelector
+          sources={extendedSnapshotsInfo.sources}
+          activeSource={activeMetadataSource || ""}
+          onSourceChange={setActiveMetadataSource}
+          snapshots={extendedSnapshotsInfo.snapshots as any}
+          showConfidence={true}
+          size="md"
+        />
+
+        {activeSnapshot && (
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-border pt-3 text-xs text-muted-foreground">
+            <span>Viewing data from</span>
+            <span className="font-medium text-foreground">{activeMetadataSource}</span>
+            <span className="text-faint">·</span>
+            <span className="font-mono tnum">
+              {Math.round(activeSnapshot.confidence * 100)}% confidence
+            </span>
+            <span className="text-faint">·</span>
+            <span className="font-mono tnum">
+              {new Date(
+                (activeSnapshot as any).fetched_at || (activeSnapshot as any).fetchedAt || new Date()
+              ).toLocaleDateString()}
+            </span>
           </div>
+        )}
+      </div>
 
-          {/* Active Source Info */}
-          {activeSnapshot && (
-            <div className="mt-3 pt-3 border-t border-zinc-800/50 flex items-center gap-2 text-xs text-zinc-500">
-              <span>Viewing data from</span>
-              <span className="font-medium text-zinc-300">{activeMetadataSource}</span>
-              <span>•</span>
-              <span>Confidence: {Math.round(activeSnapshot.confidence * 100)}%</span>
-              <span>•</span>
-              <span>Fetched: {new Date((activeSnapshot as any).fetched_at || (activeSnapshot as any).fetchedAt || new Date()).toLocaleDateString()}</span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Metadata Comparison Table */}
       {showComparison && extendedSnapshotsInfo.snapshots.length > 1 && (
         <MetadataComparisonTable
           snapshots={extendedSnapshotsInfo.snapshots as any}
           showOnlyDifferences={false}
-          className="animate-slide-up"
         />
       )}
-    </>
+    </section>
   );
 }
 
@@ -150,7 +140,7 @@ export function buildDisplayMetadata(
   return {
     ...song,
     name: data.name || song.name,
-    artist: data.album_artist || (data.artists?.[0]) || song.artist,
+    artist: data.album_artist || data.artists?.[0] || song.artist,
     album_name: data.album_name || song.album_name,
     genres: data.genres || song.genres,
     label: data.label || song.label,

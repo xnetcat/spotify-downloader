@@ -33,76 +33,63 @@ describe("MatchScoreGauge", () => {
 
       expect(container.firstChild).toHaveClass("custom-gauge");
     });
+
+    it("renders a segmented meter", () => {
+      const { container } = render(<MatchScoreGauge score={85} />);
+
+      expect(container.querySelector('[role="meter"]')).toBeInTheDocument();
+      expect(container.querySelectorAll(".meter-cell").length).toBeGreaterThan(0);
+    });
   });
 
   describe("sizes", () => {
-    it("renders small size", () => {
-      const { container } = render(<MatchScoreGauge score={85} size="sm" />);
+    it("renders more cells for larger sizes", () => {
+      const small = render(<MatchScoreGauge score={85} size="sm" />);
+      expect(small.container.querySelectorAll(".meter-cell").length).toBe(12);
 
-      const svg = container.querySelector("svg");
-      expect(svg).toHaveAttribute("width", "48");
-      expect(svg).toHaveAttribute("height", "48");
-    });
+      const medium = render(<MatchScoreGauge score={85} size="md" />);
+      expect(medium.container.querySelectorAll(".meter-cell").length).toBe(16);
 
-    it("renders medium size (default)", () => {
-      const { container } = render(<MatchScoreGauge score={85} />);
-
-      const svg = container.querySelector("svg");
-      expect(svg).toHaveAttribute("width", "64");
-      expect(svg).toHaveAttribute("height", "64");
-    });
-
-    it("renders large size", () => {
-      const { container } = render(<MatchScoreGauge score={85} size="lg" />);
-
-      const svg = container.querySelector("svg");
-      expect(svg).toHaveAttribute("width", "96");
-      expect(svg).toHaveAttribute("height", "96");
+      const large = render(<MatchScoreGauge score={85} size="lg" />);
+      expect(large.container.querySelectorAll(".meter-cell").length).toBe(20);
     });
   });
 
   describe("color thresholds", () => {
-    it("uses green color for high scores (90+)", () => {
+    it("uses success color for high scores (>=75)", () => {
       const { container } = render(<MatchScoreGauge score={95} />);
 
-      expect(container.firstChild).toHaveAttribute("data-score", "high");
-      // Check that the color CSS variable is set
-      const style = (container.firstChild as HTMLElement).style;
-      expect(style.getPropertyValue("--score-color")).toBe("var(--accent-safe)");
+      expect(container.firstChild).toHaveAttribute("data-score", "95");
+      expect(screen.getByText("95").style.color).toBe("var(--success)");
     });
 
-    it("uses yellow/warm color for medium scores (70-89)", () => {
-      const { container } = render(<MatchScoreGauge score={75} />);
+    it("uses warning color for medium scores (>=45)", () => {
+      const { container } = render(<MatchScoreGauge score={60} />);
 
-      expect(container.firstChild).toHaveAttribute("data-score", "medium");
-      const style = (container.firstChild as HTMLElement).style;
-      expect(style.getPropertyValue("--score-color")).toBe("var(--accent-warm)");
+      expect(container.firstChild).toHaveAttribute("data-score", "60");
+      expect(screen.getByText("60").style.color).toBe("var(--warning)");
     });
 
-    it("uses red/peak color for low scores (<70)", () => {
-      const { container } = render(<MatchScoreGauge score={50} />);
+    it("uses destructive color for low scores (<45)", () => {
+      const { container } = render(<MatchScoreGauge score={30} />);
 
-      expect(container.firstChild).toHaveAttribute("data-score", "low");
-      const style = (container.firstChild as HTMLElement).style;
-      expect(style.getPropertyValue("--score-color")).toBe("var(--accent-peak)");
+      expect(container.firstChild).toHaveAttribute("data-score", "30");
+      expect(screen.getByText("30").style.color).toBe("var(--destructive)");
     });
 
-    it("treats 90 as high threshold boundary", () => {
-      const { container } = render(<MatchScoreGauge score={90} />);
-
-      expect(container.firstChild).toHaveAttribute("data-score", "high");
+    it("treats 75 as the success boundary", () => {
+      render(<MatchScoreGauge score={75} />);
+      expect(screen.getByText("75").style.color).toBe("var(--success)");
     });
 
-    it("treats 70 as medium threshold boundary", () => {
-      const { container } = render(<MatchScoreGauge score={70} />);
-
-      expect(container.firstChild).toHaveAttribute("data-score", "medium");
+    it("treats 45 as the warning boundary", () => {
+      render(<MatchScoreGauge score={45} />);
+      expect(screen.getByText("45").style.color).toBe("var(--warning)");
     });
 
-    it("treats 69 as low", () => {
-      const { container } = render(<MatchScoreGauge score={69} />);
-
-      expect(container.firstChild).toHaveAttribute("data-score", "low");
+    it("treats 44 as destructive", () => {
+      render(<MatchScoreGauge score={44} />);
+      expect(screen.getByText("44").style.color).toBe("var(--destructive)");
     });
   });
 
@@ -135,43 +122,22 @@ describe("MatchScoreGauge", () => {
   describe("animation", () => {
     it("applies animation class when animated is true (default)", () => {
       const { container } = render(<MatchScoreGauge score={85} />);
-
-      const scoreCircle = container.querySelectorAll("circle")[1];
-      expect(scoreCircle).toHaveClass("animate-[scoreGaugeFill_1s_ease-out_forwards]");
+      expect(container.firstChild).toHaveClass("animate-fade-in");
     });
 
     it("does not apply animation class when animated is false", () => {
       const { container } = render(<MatchScoreGauge score={85} animated={false} />);
-
-      const scoreCircle = container.querySelectorAll("circle")[1];
-      expect(scoreCircle).not.toHaveClass("animate-[scoreGaugeFill_1s_ease-out_forwards]");
-    });
-  });
-
-  describe("SVG structure", () => {
-    it("renders two circles (background and score arc)", () => {
-      const { container } = render(<MatchScoreGauge score={85} />);
-
-      const circles = container.querySelectorAll("circle");
-      expect(circles.length).toBe(2);
-    });
-
-    it("has correct viewBox", () => {
-      const { container } = render(<MatchScoreGauge score={85} size="md" />);
-
-      const svg = container.querySelector("svg");
-      expect(svg).toHaveAttribute("viewBox", "0 0 64 64");
+      expect(container.firstChild).not.toHaveClass("animate-fade-in");
     });
   });
 });
 
 describe("MatchScoreBar", () => {
   describe("rendering", () => {
-    it("renders progress bar", () => {
+    it("renders a segmented meter", () => {
       const { container } = render(<MatchScoreBar score={75} />);
 
-      const progressBar = container.querySelector(".h-2");
-      expect(progressBar).toBeInTheDocument();
+      expect(container.querySelector('[role="meter"]')).toBeInTheDocument();
     });
 
     it("shows percentage by default", () => {
@@ -189,13 +155,13 @@ describe("MatchScoreBar", () => {
     it("shows label when showLabel is true", () => {
       render(<MatchScoreBar score={75} showLabel />);
 
-      expect(screen.getByText("Match Score")).toBeInTheDocument();
+      expect(screen.getByText("Match score")).toBeInTheDocument();
     });
 
     it("hides label by default", () => {
       render(<MatchScoreBar score={75} />);
 
-      expect(screen.queryByText("Match Score")).not.toBeInTheDocument();
+      expect(screen.queryByText("Match score")).not.toBeInTheDocument();
     });
 
     it("applies custom className", () => {
@@ -207,49 +173,20 @@ describe("MatchScoreBar", () => {
     });
   });
 
-  describe("progress fill", () => {
-    it("fills bar according to score percentage", () => {
-      const { container } = render(<MatchScoreBar score={50} />);
-
-      const fill = container.querySelector(".h-full.rounded-full");
-      expect(fill).toHaveStyle({ width: "50%" });
-    });
-
-    it("handles 0% fill", () => {
-      const { container } = render(<MatchScoreBar score={0} />);
-
-      const fill = container.querySelector(".h-full.rounded-full");
-      expect(fill).toHaveStyle({ width: "0%" });
-    });
-
-    it("handles 100% fill", () => {
-      const { container } = render(<MatchScoreBar score={100} />);
-
-      const fill = container.querySelector(".h-full.rounded-full");
-      expect(fill).toHaveStyle({ width: "100%" });
-    });
-  });
-
   describe("color thresholds", () => {
-    it("uses appropriate color for high scores", () => {
-      const { container } = render(<MatchScoreBar score={95} />);
-
-      const fill = container.querySelector(".h-full.rounded-full");
-      expect(fill).toHaveStyle({ backgroundColor: "var(--accent-safe)" });
+    it("uses success color for high scores", () => {
+      render(<MatchScoreBar score={95} />);
+      expect(screen.getByText("95%").style.color).toBe("var(--success)");
     });
 
-    it("uses appropriate color for medium scores", () => {
-      const { container } = render(<MatchScoreBar score={75} />);
-
-      const fill = container.querySelector(".h-full.rounded-full");
-      expect(fill).toHaveStyle({ backgroundColor: "var(--accent-warm)" });
+    it("uses warning color for medium scores", () => {
+      render(<MatchScoreBar score={60} />);
+      expect(screen.getByText("60%").style.color).toBe("var(--warning)");
     });
 
-    it("uses appropriate color for low scores", () => {
-      const { container } = render(<MatchScoreBar score={50} />);
-
-      const fill = container.querySelector(".h-full.rounded-full");
-      expect(fill).toHaveStyle({ backgroundColor: "var(--accent-peak)" });
+    it("uses destructive color for low scores", () => {
+      render(<MatchScoreBar score={30} />);
+      expect(screen.getByText("30%").style.color).toBe("var(--destructive)");
     });
   });
 
@@ -291,46 +228,20 @@ describe("ScoreBadge", () => {
     });
   });
 
-  describe("color classes", () => {
-    it("applies high score background class", () => {
-      const { container } = render(<ScoreBadge score={95} />);
-
-      expect(container.firstChild).toHaveClass("bg-[var(--accent-safe)]/10");
-    });
-
-    it("applies medium score background class", () => {
-      const { container } = render(<ScoreBadge score={75} />);
-
-      expect(container.firstChild).toHaveClass("bg-[var(--accent-warm)]/10");
-    });
-
-    it("applies low score background class", () => {
-      const { container } = render(<ScoreBadge score={50} />);
-
-      expect(container.firstChild).toHaveClass("bg-[var(--accent-peak)]/10");
-    });
-  });
-
   describe("text color", () => {
-    it("uses matching text color for high scores", () => {
+    it("uses success color for high scores", () => {
       const { container } = render(<ScoreBadge score={95} />);
-
-      const badge = container.firstChild as HTMLElement;
-      expect(badge.style.color).toBe("var(--accent-safe)");
+      expect((container.firstChild as HTMLElement).style.color).toBe("var(--success)");
     });
 
-    it("uses matching text color for medium scores", () => {
-      const { container } = render(<ScoreBadge score={75} />);
-
-      const badge = container.firstChild as HTMLElement;
-      expect(badge.style.color).toBe("var(--accent-warm)");
-    });
-
-    it("uses matching text color for low scores", () => {
+    it("uses warning color for medium scores", () => {
       const { container } = render(<ScoreBadge score={50} />);
+      expect((container.firstChild as HTMLElement).style.color).toBe("var(--warning)");
+    });
 
-      const badge = container.firstChild as HTMLElement;
-      expect(badge.style.color).toBe("var(--accent-peak)");
+    it("uses destructive color for low scores", () => {
+      const { container } = render(<ScoreBadge score={30} />);
+      expect((container.firstChild as HTMLElement).style.color).toBe("var(--destructive)");
     });
   });
 

@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
-import { clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import * as SwitchPrimitive from "@radix-ui/react-switch";
+import { cn } from "@/lib/utils";
 
 export interface ToggleSwitchProps {
   /** Whether the switch is on */
@@ -25,130 +25,65 @@ export interface ToggleSwitchProps {
 
 const sizeConfig = {
   sm: {
-    track: "w-8 h-4",
-    thumb: "w-3 h-3",
-    translate: "translate-x-4",
-    labelText: "text-sm",
+    track: "h-4 w-7",
+    thumb: "size-3 data-[state=checked]:translate-x-3.5 data-[state=unchecked]:translate-x-0.5",
+    label: "text-sm",
   },
   md: {
-    track: "w-11 h-6",
-    thumb: "w-5 h-5",
-    translate: "translate-x-5",
-    labelText: "text-sm",
+    track: "h-5 w-9",
+    thumb: "size-4 data-[state=checked]:translate-x-4 data-[state=unchecked]:translate-x-0.5",
+    label: "text-sm",
   },
   lg: {
-    track: "w-14 h-7",
-    thumb: "w-6 h-6",
-    translate: "translate-x-7",
-    labelText: "text-base",
+    track: "h-6 w-11",
+    thumb: "size-5 data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0.5",
+    label: "text-base",
   },
-};
+} as const;
 
-export const ToggleSwitch = forwardRef<HTMLInputElement, ToggleSwitchProps>(
-  (
-    {
-      checked,
-      onChange,
-      label,
-      description,
-      size = "md",
-      disabled = false,
-      className,
-      id,
-      name,
-    },
-    ref
-  ) => {
+export const ToggleSwitch = forwardRef<HTMLButtonElement, ToggleSwitchProps>(
+  ({ checked, onChange, label, description, size = "md", disabled = false, className, id, name }, ref) => {
     const config = sizeConfig[size];
-
-    const handleClick = (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (!disabled) {
-        onChange(!checked);
-      }
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        if (!disabled) {
-          onChange(!checked);
-        }
-      }
-    };
 
     return (
       <label
-        className={twMerge(
-          clsx(
-            "inline-flex items-start gap-3",
-            disabled && "opacity-50 cursor-not-allowed",
-            !disabled && "cursor-pointer"
-          ),
+        className={cn(
+          "inline-flex items-start gap-3",
+          disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
           className
         )}
       >
-        {/* Hidden input for form integration */}
-        <input
+        <SwitchPrimitive.Root
           ref={ref}
-          type="checkbox"
           id={id}
           name={name}
           checked={checked}
-          onChange={(e) => onChange(e.target.checked)}
+          onCheckedChange={onChange}
           disabled={disabled}
-          className="sr-only"
-          aria-checked={checked}
-        />
-
-        {/* Track */}
-        <div
-          role="switch"
-          aria-checked={checked}
-          tabIndex={disabled ? -1 : 0}
-          onClick={handleClick}
-          onKeyDown={handleKeyDown}
-          className={clsx(
-            "toggle-switch relative inline-flex flex-shrink-0 rounded-full",
-            "transition-colors duration-200 ease-in-out",
-            "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-safe)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-panel)]",
-            config.track,
-            checked
-              ? "bg-[var(--accent-safe)]"
-              : "bg-[var(--bg-surface)]"
+          className={cn(
+            "peer inline-flex shrink-0 items-center rounded-full border border-transparent",
+            "transition-colors outline-none",
+            "focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            "disabled:cursor-not-allowed",
+            "data-[state=checked]:bg-primary data-[state=unchecked]:bg-elevated",
+            config.track
           )}
         >
-          {/* Thumb */}
-          <span
-            className={clsx(
-              "toggle-switch-thumb pointer-events-none inline-block rounded-full",
-              "bg-white shadow-lg",
-              "transform transition-transform duration-200 ease-[var(--ease-spring)]",
-              config.thumb,
-              checked ? config.translate : "translate-x-0.5",
-              "mt-0.5"
+          <SwitchPrimitive.Thumb
+            className={cn(
+              "pointer-events-none block rounded-full bg-background shadow-sm ring-0 transition-transform",
+              config.thumb
             )}
           />
-        </div>
+        </SwitchPrimitive.Root>
 
-        {/* Label and description */}
         {(label || description) && (
           <div className="flex flex-col">
             {label && (
-              <span
-                className={clsx(
-                  "font-medium text-[var(--color-text-primary)]",
-                  config.labelText
-                )}
-              >
-                {label}
-              </span>
+              <span className={cn("font-medium text-foreground", config.label)}>{label}</span>
             )}
             {description && (
-              <span className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                {description}
-              </span>
+              <span className="mt-0.5 text-xs text-muted-foreground">{description}</span>
             )}
           </div>
         )}

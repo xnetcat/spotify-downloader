@@ -1,4 +1,4 @@
-"""AudioMeter — Horizontal bar visualization widget."""
+"""AudioMeter — segmented LED meter for audio features."""
 
 from __future__ import annotations
 
@@ -7,27 +7,13 @@ from textual.containers import Horizontal
 from textual.widget import Widget
 from textual.widgets import Static
 
+from spotdl_cli.theme import Theme, segmented_meter
 
-def _gradient_bar(value: float, width: int = 20) -> str:
-    """Build a gradient bar using Unicode block elements."""
-    clamped = max(0.0, min(1.0, value))
-    filled = int(clamped * width)
-    partial = clamped * width - filled
-
-    bar = "█" * filled
-    if partial > 0.75:
-        bar += "▓"
-    elif partial > 0.5:
-        bar += "▒"
-    elif partial > 0.25:
-        bar += "░"
-
-    bar = bar.ljust(width, " ")
-    return bar[:width]
+METER_WIDTH = 16
 
 
 class AudioMeter(Widget):
-    """Horizontal bar with gradient feel and value label."""
+    """Label + segmented amber LED meter (▰▱) + value, mono-aligned."""
 
     DEFAULT_CSS = """
     AudioMeter {
@@ -37,15 +23,15 @@ class AudioMeter(Widget):
     }
     AudioMeter .am-label {
         width: 14;
-        color: #a8a8b3;
+        color: #8b93a7;
     }
     AudioMeter .am-bar {
-        width: 1fr;
-        color: #e8764b;
+        width: auto;
+        margin: 0 1;
     }
     AudioMeter .am-value {
         width: 6;
-        color: #fafafa;
+        color: #e8eaf0;
         text-style: bold;
         text-align: right;
     }
@@ -63,31 +49,26 @@ class AudioMeter(Widget):
         self._value = value
         self._format = display_format
 
-    def compose(self) -> ComposeResult:
-        bar = _gradient_bar(self._value)
-        if self._format == "percent":
-            val_str = f"{self._value * 100:.0f}%"
-        elif self._format == "bpm":
-            val_str = f"{self._value:.0f}"
-        else:
-            val_str = f"{self._value:.2f}"
+    def _bar(self, value: float) -> str:
+        return segmented_meter(value, width=METER_WIDTH, lit_color=Theme.PRIMARY)
 
+    def _value_str(self, value: float) -> str:
+        if self._format == "percent":
+            return f"{value * 100:.0f}%"
+        if self._format == "bpm":
+            return f"{value:.0f}"
+        return f"{value:.2f}"
+
+    def compose(self) -> ComposeResult:
         with Horizontal():
             yield Static(self._label, classes="am-label")
-            yield Static(bar, classes="am-bar")
-            yield Static(val_str, classes="am-value")
+            yield Static(self._bar(self._value), classes="am-bar", markup=True)
+            yield Static(self._value_str(self._value), classes="am-value")
 
     def update_value(self, value: float) -> None:
         self._value = value
         try:
-            bar = _gradient_bar(value)
-            self.query_one(".am-bar", Static).update(bar)
-            if self._format == "percent":
-                val_str = f"{value * 100:.0f}%"
-            elif self._format == "bpm":
-                val_str = f"{value:.0f}"
-            else:
-                val_str = f"{value:.2f}"
-            self.query_one(".am-value", Static).update(val_str)
+            self.query_one(".am-bar", Static).update(self._bar(value))
+            self.query_one(".am-value", Static).update(self._value_str(value))
         except Exception:
             pass

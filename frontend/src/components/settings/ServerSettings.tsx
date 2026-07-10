@@ -1,13 +1,6 @@
 import { useSettingsStore } from "@/stores/settings";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  Input,
-  Select,
-  ToggleSwitch,
-} from "@/components/ui";
-import { SectionHeader } from "./SectionHeader";
+import { Input, Select, Switch } from "@/components/ui";
+import { SettingsSection, SettingRow } from "./SettingsSection";
 import { useSettingsContext } from "./SettingsContext";
 
 const TIMEOUT_OPTIONS = [
@@ -19,66 +12,43 @@ const TIMEOUT_OPTIONS = [
 ];
 
 export function ServerSettings() {
-  const {
-    apiUrl,
-    apiTimeout,
-    offlineMode,
-    update,
-  } = useSettingsStore();
-
+  const { apiUrl, apiTimeout, offlineMode, update } = useSettingsStore();
   const { changeInput, showSuccess, triggerAutoSave, changeSetting } = useSettingsContext();
 
   return (
-    <Card variant="bordered" className="animate-slide-up stagger-4">
-      <CardHeader>
-        <SectionHeader
-          icon={
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"
-              />
-            </svg>
-          }
-          iconBg="bg-gradient-to-br from-[var(--accent-cool)]/20 to-blue-500/20"
-          iconColor="text-[var(--accent-cool)]"
-          title="Server Connection"
-          description="Configure backend API connection"
-        />
-      </CardHeader>
-      <CardContent className="space-y-5">
+    <SettingsSection
+      id="server"
+      title="Server"
+      description="How the app reaches the backend API."
+    >
+      <SettingRow label="API URL" help="Base address of the spotDL server.">
         <Input
-          label="API URL"
           value={apiUrl}
           onChange={changeInput("apiUrl", "API URL")}
           placeholder="http://localhost:8000"
+          className="w-full font-mono sm:w-72"
         />
+      </SettingRow>
 
+      <SettingRow label="API timeout" help="How long to wait before a request fails.">
         <Select
-          label="API Timeout"
           options={TIMEOUT_OPTIONS}
           value={String(apiTimeout)}
           onChange={(e) => {
             update("apiTimeout", Number(e.target.value));
-            showSuccess("API Timeout updated");
+            showSuccess("API timeout updated");
             triggerAutoSave();
           }}
+          className="w-full sm:w-56"
         />
+      </SettingRow>
 
-        <ToggleSwitch
+      <SettingRow label="Offline mode" help="Use local matching when the server is unavailable.">
+        <Switch
           checked={offlineMode}
-          onChange={(val) => changeSetting("offlineMode", val, "Offline mode")}
-          label="Offline mode"
-          description="Use local matching when server is unavailable"
+          onCheckedChange={(val) => changeSetting("offlineMode", val, "Offline mode")}
         />
-      </CardContent>
-    </Card>
+      </SettingRow>
+    </SettingsSection>
   );
 }

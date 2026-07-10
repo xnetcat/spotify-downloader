@@ -15,27 +15,28 @@ describe("Card", () => {
 
   it("renders with default variant", () => {
     const { container } = render(<Card>Content</Card>);
-    expect(container.firstChild).toHaveClass("bg-[#111113]");
+    expect(container.firstChild).toHaveClass("bg-card", "border", "border-border", "rounded-lg");
   });
 
   it("renders with bordered variant", () => {
     const { container } = render(<Card variant="bordered">Content</Card>);
-    expect(container.firstChild).toHaveClass("border", "border-zinc-800/80");
+    expect(container.firstChild).toHaveClass("border", "border-border");
   });
 
   it("renders with elevated variant", () => {
     const { container } = render(<Card variant="elevated">Content</Card>);
-    expect(container.firstChild).toHaveClass("shadow-xl");
+    expect(container.firstChild).toHaveClass("bg-elevated");
   });
 
-  it("renders with glass variant", () => {
+  it("renders glass variant as flat card", () => {
+    // `glass` is a legacy no-op that maps onto the flat Control Room card.
     const { container } = render(<Card variant="glass">Content</Card>);
-    expect(container.firstChild).toHaveClass("glass");
+    expect(container.firstChild).toHaveClass("bg-card");
   });
 
   it("applies hover effect when hover prop is true", () => {
     const { container } = render(<Card hover>Content</Card>);
-    expect(container.firstChild).toHaveClass("card-hover");
+    expect(container.firstChild).toHaveClass("cursor-pointer");
   });
 });
 

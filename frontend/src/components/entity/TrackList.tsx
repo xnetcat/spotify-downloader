@@ -1,243 +1,216 @@
-import { useState } from "react";
-import { Button, Badge, PlatformBadge } from "@/components/ui";
-import type { Song } from "@/types";
+import type { ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
+import { Download, Link2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-interface TrackListProps {
-  tracks: Song[];
-  onDownload?: (track: Song) => void;
-  onPlayPreview?: (track: Song) => void;
-  showAlbum?: boolean;
-  showTrackNumber?: boolean;
+/** Minimal track shape the list needs — a superset of InternalSong. */
+export interface TrackListTrack {
+  id: string;
+  name: string;
+  artist: string;
+  album_name?: string | null;
+  album_id?: string | null;
+  duration: number;
+  explicit?: boolean;
+  track_number?: number | null;
+  matches_count?: number;
 }
 
-export function TrackList({
-  tracks,
+export interface TrackGroup<T extends TrackListTrack> {
+  key: string | number;
+  /** Rendered verbatim as the group's eyebrow (e.g. "Disc 1"). */
+  label: string;
+  count?: number;
+  tracks: T[];
+}
+
+interface TrackListProps<T extends TrackListTrack> {
+  /** Flat list of rows. Ignored when `groups` is provided. */
+  tracks?: T[];
+  /** Grouped rows with a subheader per group (disc grouping). */
+  groups?: TrackGroup<T>[];
+  /** Numbering source. `track` uses `track_number`; `index` counts positionally. */
+  numbering?: "index" | "track";
+  /** Offset added to positional numbering (pagination). */
+  startIndex?: number;
+  /** Secondary line beneath the title (artist, album, …). */
+  subtitle?: (track: T) => ReactNode;
+  /** Dedicated album column, shown from `md` up (playlist view). */
+  albumColumn?: boolean;
+  onDownload?: (track: T) => void;
+  canDownload?: boolean;
+}
+
+function formatDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
+
+function TrackRow<T extends TrackListTrack>({
+  track,
+  position,
+  subtitle,
+  albumColumn,
   onDownload,
-  onPlayPreview,
-  showAlbum = true,
-  showTrackNumber = true,
-}: TrackListProps) {
-  const [expandedTrack, setExpandedTrack] = useState<string | null>(null);
-
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  const totalDuration = tracks.reduce((sum, t) => sum + t.duration, 0);
-  const formatTotalDuration = () => {
-    const hours = Math.floor(totalDuration / 3600);
-    const mins = Math.floor((totalDuration % 3600) / 60);
-    if (hours > 0) {
-      return `${hours} hr ${mins} min`;
-    }
-    return `${mins} min`;
-  };
+  canDownload,
+}: {
+  track: T;
+  position: number;
+  subtitle?: (track: T) => ReactNode;
+  albumColumn?: boolean;
+  onDownload?: (track: T) => void;
+  canDownload?: boolean;
+}) {
+  const secondary = subtitle?.(track);
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-800">
-        <div className="flex items-center gap-6 text-sm text-zinc-500">
-          <span className="w-8 text-center">#</span>
-          <span>Title</span>
-        </div>
-        <div className="flex items-center gap-6 text-sm text-zinc-500">
-          {showAlbum && <span className="hidden md:block w-40">Album</span>}
-          <span className="w-12 text-right">
-            <svg className="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </span>
-          <span className="w-20"></span>
-        </div>
-      </div>
+    <div className="group flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-elevated">
+      <span className="w-8 shrink-0 text-right font-mono text-xs text-faint tnum">
+        {String(position).padStart(2, "0")}
+      </span>
 
-      {/* Track List */}
-      <div className="space-y-1">
-        {tracks.map((track, index) => {
-          const trackKey = `${track.platform}-${track.platform_id}`;
-          const isExpanded = expandedTrack === trackKey;
-
-          return (
-            <div
-              key={trackKey}
-              className="group relative"
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <Link
+            to="/song/$id"
+            params={{ id: track.id }}
+            className="truncate font-medium text-foreground transition-colors hover:text-primary"
+          >
+            {track.name}
+          </Link>
+          {track.explicit && (
+            <span
+              aria-label="Explicit"
+              title="Explicit"
+              className="shrink-0 rounded-sm border border-border px-1 font-mono text-[10px] leading-4 text-faint"
             >
-              <div
-                className={`flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 ${
-                  isExpanded
-                    ? "bg-zinc-800/80"
-                    : "hover:bg-zinc-800/50"
-                }`}
-              >
-                {/* Left side - Track info */}
-                <div className="flex items-center gap-4 flex-1 min-w-0">
-                  {/* Track number / Play indicator */}
-                  <div className="w-8 text-center shrink-0">
-                    {showTrackNumber ? (
-                      <span className="text-sm text-zinc-500 group-hover:hidden">
-                        {track.track_number || index + 1}
-                      </span>
-                    ) : (
-                      <span className="text-sm text-zinc-500 group-hover:hidden">
-                        {index + 1}
-                      </span>
-                    )}
-                    <button
-                      onClick={() => onPlayPreview?.(track)}
-                      className="hidden group-hover:block text-emerald-400 hover:text-emerald-300"
-                    >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z" />
-                      </svg>
-                    </button>
-                  </div>
-
-                  {/* Cover art */}
-                  <div className="w-10 h-10 rounded shrink-0">
-                    {track.cover_url ? (
-                      <img
-                        src={track.cover_url}
-                        alt={track.name}
-                        className="w-10 h-10 rounded object-cover"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded bg-zinc-800 flex items-center justify-center">
-                        <svg className="w-5 h-5 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Track name and artist */}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <a
-                        href={`/song/${track.platform}/${track.platform_id}`}
-                        className="font-medium text-zinc-100 truncate hover:underline"
-                      >
-                        {track.name}
-                      </a>
-                      {track.explicit && (
-                        <Badge variant="default" size="sm" className="shrink-0">
-                          E
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-sm text-zinc-400 truncate">
-                      {track.artists.join(", ")}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Right side - Album, duration, actions */}
-                <div className="flex items-center gap-6">
-                  {showAlbum && (
-                    <span className="hidden md:block w-40 text-sm text-zinc-500 truncate">
-                      {track.album_name}
-                    </span>
-                  )}
-
-                  <span className="w-12 text-right text-sm text-zinc-400 font-mono tabular-nums">
-                    {formatDuration(track.duration)}
-                  </span>
-
-                  <div className="w-20 flex justify-end">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setExpandedTrack(isExpanded ? null : trackKey)}
-                      className="text-zinc-400 hover:text-white"
-                    >
-                      <svg
-                        className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </Button>
-                    {onDownload && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onDownload(track)}
-                        className="text-zinc-400 hover:text-emerald-400"
-                      >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                          />
-                        </svg>
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Expanded details */}
-              {isExpanded && (
-                <div className="px-16 py-4 bg-zinc-800/40 rounded-b-lg -mt-1 animate-slide-down">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    {track.album_name && (
-                      <div>
-                        <span className="text-zinc-500 block">Album</span>
-                        <span className="text-zinc-200">{track.album_name}</span>
-                      </div>
-                    )}
-                    {track.year && (
-                      <div>
-                        <span className="text-zinc-500 block">Year</span>
-                        <span className="text-zinc-200">{track.year}</span>
-                      </div>
-                    )}
-                    {track.isrc && (
-                      <div>
-                        <span className="text-zinc-500 block">ISRC</span>
-                        <span className="text-zinc-200 font-mono text-xs">{track.isrc}</span>
-                      </div>
-                    )}
-                    {track.genres && track.genres.length > 0 && (
-                      <div>
-                        <span className="text-zinc-500 block">Genres</span>
-                        <span className="text-zinc-200">{track.genres.join(", ")}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="mt-3 flex items-center gap-2">
-                    <PlatformBadge platform={track.platform as any} />
-                    <a
-                      href={track.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
-                    >
-                      Open in {track.platform.replace("_", " ")}
-                    </a>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
+              E
+            </span>
+          )}
+          {track.matches_count ? (
+            <span
+              title={`${track.matches_count} cross-platform matches`}
+              className="hidden shrink-0 items-center gap-0.5 font-mono text-[11px] text-info tnum sm:inline-flex"
+            >
+              <Link2 className="size-3" />
+              {track.matches_count}
+            </span>
+          ) : null}
+        </div>
+        {secondary ? (
+          <div className="truncate text-sm text-muted-foreground">{secondary}</div>
+        ) : null}
       </div>
 
-      {/* Footer */}
-      <div className="flex items-center justify-between px-4 py-4 border-t border-zinc-800 text-sm text-zinc-500">
-        <span>{tracks.length} {tracks.length === 1 ? "track" : "tracks"}</span>
-        <span>{formatTotalDuration()}</span>
+      {albumColumn ? (
+        <div className="hidden w-40 shrink-0 truncate text-sm text-muted-foreground md:block">
+          {track.album_id ? (
+            <Link
+              to="/album/$id"
+              params={{ id: track.album_id }}
+              className="transition-colors hover:text-foreground"
+            >
+              {track.album_name}
+            </Link>
+          ) : (
+            track.album_name
+          )}
+        </div>
+      ) : null}
+
+      <span className="w-12 shrink-0 text-right font-mono text-xs text-faint tnum">
+        {formatDuration(track.duration)}
+      </span>
+
+      {canDownload ? (
+        <div className="w-8 shrink-0">
+          {onDownload ? (
+            <button
+              type="button"
+              onClick={() => onDownload(track)}
+              aria-label={`Download ${track.name}`}
+              className={cn(
+                "flex size-8 items-center justify-center rounded-md text-muted-foreground",
+                "opacity-0 transition-colors hover:bg-accent hover:text-accent-foreground",
+                "focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "group-hover:opacity-100 [@media(hover:none)]:opacity-100"
+              )}
+            >
+              <Download className="size-4" />
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Dense, numbered track table in the Control Room language: mono index and
+ * duration columns with tabular figures, hairline column header, per-row
+ * download that appears on hover (and stays visible on touch).
+ */
+export function TrackList<T extends TrackListTrack>({
+  tracks,
+  groups,
+  numbering = "index",
+  startIndex = 0,
+  subtitle,
+  albumColumn = false,
+  onDownload,
+  canDownload = false,
+}: TrackListProps<T>) {
+  const positionFor = (track: T, absolute: number) =>
+    numbering === "track" ? track.track_number ?? absolute + 1 : startIndex + absolute + 1;
+
+  const renderRows = (list: T[], offset: number) =>
+    list.map((track, i) => (
+      <TrackRow
+        key={track.id}
+        track={track}
+        position={positionFor(track, offset + i)}
+        subtitle={subtitle}
+        albumColumn={albumColumn}
+        onDownload={onDownload}
+        canDownload={canDownload}
+      />
+    ));
+
+  let running = 0;
+  const showGroupLabels = (groups?.length ?? 0) > 1;
+
+  return (
+    <div>
+      {/* Column header */}
+      <div className="flex items-center gap-3 border-b border-border px-2 pb-2 text-[11px] font-medium uppercase tracking-wider text-faint">
+        <span className="w-8 shrink-0 text-right">#</span>
+        <span className="flex-1">Title</span>
+        {albumColumn ? <span className="hidden w-40 shrink-0 md:block">Album</span> : null}
+        <span className="w-12 shrink-0 text-right">Time</span>
+        {canDownload ? <span className="w-8 shrink-0" aria-hidden /> : null}
+      </div>
+
+      <div className="mt-1 space-y-0.5">
+        {groups
+          ? groups.map((group) => {
+              const offset = running;
+              running += group.tracks.length;
+              return (
+                <div key={group.key}>
+                  {showGroupLabels ? (
+                    <div className="flex items-center gap-2 px-2 pt-3 pb-1 text-xs font-medium uppercase tracking-wider text-faint">
+                      <span>{group.label}</span>
+                      {group.count != null ? (
+                        <span className="font-mono text-faint/70 tnum">{group.count}</span>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {renderRows(group.tracks, offset)}
+                </div>
+              );
+            })
+          : renderRows(tracks ?? [], 0)}
       </div>
     </div>
   );

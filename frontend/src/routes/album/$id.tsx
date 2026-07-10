@@ -1,24 +1,18 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
+import { motion } from "motion/react";
+import { toast } from "sonner";
+import { Download, Info, Flag, Disc3, Copyright } from "lucide-react";
 import { useInternalAlbum, useRefreshEntity } from "@/api/entities";
 import { useCreateReport } from "@/api";
 import { useQueueStore } from "@/stores/queue";
 import { useAuthStore } from "@/stores/auth";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Badge,
-  Button,
-  RefreshMetadataButton,
-  EntityErrorCard,
-} from "@/components/ui";
-import { CoverArt } from "@/components/ui/cover-art";
-import { Spinner } from "@/components/ui";
+import { Button, RefreshMetadataButton, EntityErrorCard } from "@/components/ui";
 import { PlatformLinksGrid } from "@/components/ui/platform-link";
 import { MetadataPanel, MetadataField } from "@/components/ui/metadata-source-badge";
 import { ReportModal } from "@/components/ui/report-modal";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EntityHeader, TrackList } from "@/components/entity";
 import { useDevConfig } from "@/contexts/DevConfigContext";
 import type { InternalSong, CreateMetadataReportRequest } from "@/types";
 
@@ -28,26 +22,32 @@ export const Route = createFileRoute("/album/$id")({
 
 const TARGET_PLATFORMS = ["youtube", "youtube_music", "soundcloud", "bandcamp", "piped"];
 
-function formatDuration(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins}:${secs.toString().padStart(2, "0")}`;
-}
+/** Album tracks arrive with track/disc numbers the base InternalSong type omits. */
+type AlbumSong = InternalSong & { track_number?: number | null; disc_number?: number | null };
+
+const ALBUM_TYPE_LABEL: Record<string, string> = {
+  album: "Album",
+  single: "Single",
+  ep: "EP",
+  compilation: "Compilation",
+};
+
+const ALBUM_TYPE_INFO: Record<string, { title: string; detail: string }> = {
+  single: { title: "Single Release", detail: "1-3 tracks" },
+  ep: { title: "Extended Play", detail: "4-6 tracks" },
+  compilation: { title: "Compilation Album", detail: "Various artists or greatest hits" },
+};
 
 function formatTotalDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
-  if (hours > 0) {
-    return `${hours} hr ${mins} min`;
-  }
-  return `${mins} min`;
+  return hours > 0 ? `${hours} hr ${mins} min` : `${mins} min`;
 }
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return "";
   try {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
+    return new Date(dateStr).toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -57,13 +57,44 @@ function formatDate(dateStr: string | null): string {
   }
 }
 
-// Album type badge styling
-const ALBUM_TYPE_STYLES: Record<string, { variant: "default" | "success" | "warning" | "error" | "info" | "premium" | "muted"; label: string }> = {
-  album: { variant: "info", label: "Album" },
-  single: { variant: "warning", label: "Single" },
-  ep: { variant: "success", label: "EP" },
-  compilation: { variant: "premium", label: "Compilation" },
-};
+function StatCard({ label, value, mono }: { label: string; value: string | number; mono?: boolean }) {
+  return (
+    <div className="rounded-lg border border-border bg-card px-4 py-3">
+      <div
+        className={
+          mono
+            ? "font-mono text-lg font-semibold tabular-nums text-foreground tnum"
+            : "font-display text-lg font-semibold text-foreground"
+        }
+      >
+        {value}
+      </div>
+      <div className="mt-0.5 text-xs font-medium uppercase tracking-wider text-faint">{label}</div>
+    </div>
+  );
+}
+
+function AlbumSkeleton() {
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
+        <Skeleton className="mx-auto size-[200px] rounded-md sm:mx-0" />
+        <div className="flex-1 space-y-3">
+          <Skeleton className="h-3 w-16" />
+          <Skeleton className="h-9 w-64" />
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-3 w-52" />
+        </div>
+      </div>
+      <div className="space-y-2">
+        {Array.from({ length: 8 }, (_, i) => (
+          <Skeleton key={i} className="h-10 w-full" />
+        ))}
+      </div>
+      <p className="text-sm text-faint">Loading album…</p>
+    </div>
+  );
+}
 
 function AlbumPage() {
   const navigate = useNavigate();
@@ -76,14 +107,8 @@ function AlbumPage() {
   const { features } = useDevConfig();
 
   const [showReportModal, setShowReportModal] = useState(false);
-  const [showMetadata, setShowMetadata] = useState(true);
+  const [showDetails, setShowDetails] = useState(true);
 
-  // Report submission handler
-  const handleReportSubmit = async (report: CreateMetadataReportRequest) => {
-    await createReportMutation.mutateAsync(report);
-  };
-
-  // Fields available for reporting
   const reportableFields = useMemo(() => {
     if (!album) return [];
     return [
@@ -98,78 +123,61 @@ function AlbumPage() {
     ];
   }, [album]);
 
-  // Group songs by disc number
+  // Group songs by disc number (single-disc albums collapse to one group).
   const discGroups = useMemo(() => {
-    if (!album?.songs.length) return [];
+    const songs = (album?.songs ?? []) as AlbumSong[];
+    if (!songs.length) return [];
 
-    // Check if any songs have disc_number > 1
-    const hasMultipleDiscs = album.songs.some((song: any) => song.disc_number && song.disc_number > 1);
+    const byTrack = (a: AlbumSong, b: AlbumSong) =>
+      (a.track_number || 0) - (b.track_number || 0);
 
+    const hasMultipleDiscs = songs.some((s) => (s.disc_number ?? 1) > 1);
     if (!hasMultipleDiscs) {
-      // Single disc album - return songs sorted by track number
-      const sortedSongs = [...album.songs].sort((a: any, b: any) => {
-        const trackA = a.track_number || 0;
-        const trackB = b.track_number || 0;
-        return trackA - trackB;
-      });
-      return [{ discNumber: 1, songs: sortedSongs, isMultiDisc: false }];
+      return [{ discNumber: 1, songs: [...songs].sort(byTrack), isMultiDisc: false }];
     }
 
-    // Multi-disc album - group by disc number
-    const groups: Record<number, InternalSong[]> = {};
-    album.songs.forEach((song: any) => {
-      const discNum = song.disc_number || 1;
-      if (!groups[discNum]) {
-        groups[discNum] = [];
-      }
-      groups[discNum].push(song);
+    const groups: Record<number, AlbumSong[]> = {};
+    songs.forEach((s) => {
+      const disc = s.disc_number || 1;
+      (groups[disc] ??= []).push(s);
     });
-
-    // Sort songs within each disc by track number
     return Object.entries(groups)
       .sort(([a], [b]) => Number(a) - Number(b))
-      .map(([discNum, songs]) => ({
-        discNumber: Number(discNum),
-        songs: songs.sort((a: any, b: any) => {
-          const trackA = a.track_number || 0;
-          const trackB = b.track_number || 0;
-          return trackA - trackB;
-        }),
+      .map(([disc, list]) => ({
+        discNumber: Number(disc),
+        songs: [...list].sort(byTrack),
         isMultiDisc: true,
       }));
   }, [album?.songs]);
 
-  const handleDownloadTrack = async (track: InternalSong) => {
+  const handleDownloadTrack = (track: InternalSong) => {
     if (!features.canDownload || !track.platforms[0]) {
       navigate({ to: "/queue" });
       return;
     }
-
-    const downloadable = track.platforms.find(p => TARGET_PLATFORMS.includes(p.platform)) || track.platforms[0];
-
-    addItem(
-      {
-        platform: downloadable.platform,
-        platform_id: downloadable.platform_id,
-        url: downloadable.url,
-        name: track.name,
-        artists: track.artists || [track.artist],
-        artist: track.artist,
-        album_name: track.album_name,
-        duration: track.duration,
-        isrc: track.isrc,
-        cover_url: track.cover_url,
-      } as any
-    );
+    const downloadable =
+      track.platforms.find((p) => TARGET_PLATFORMS.includes(p.platform)) || track.platforms[0];
+    addItem({
+      platform: downloadable.platform,
+      platform_id: downloadable.platform_id,
+      url: downloadable.url,
+      name: track.name,
+      artists: track.artists || [track.artist],
+      artist: track.artist,
+      album_name: track.album_name,
+      duration: track.duration,
+      isrc: track.isrc,
+      cover_url: track.cover_url,
+    } as any);
+    toast.success("Added to download queue");
     navigate({ to: "/queue" });
   };
 
-  const handleDownloadAll = async () => {
+  const handleDownloadAll = () => {
     if (!features.canDownload || !album?.songs.length) {
       navigate({ to: "/queue" });
       return;
     }
-
     const songsToAdd = album.songs
       .filter((song) => song.platforms[0])
       .map((song) => ({
@@ -184,445 +192,209 @@ function AlbumPage() {
         isrc: song.isrc,
         cover_url: song.cover_url,
       }));
-
     if (songsToAdd.length > 0 && addBulkItems) {
       addBulkItems(songsToAdd, {
         type: "album",
         name: album.name,
         url: album.platforms[0]?.url || "",
       });
+      toast.success(`Queued ${songsToAdd.length} tracks`);
       navigate({ to: "/queue" });
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 gap-6">
-        <Spinner size="lg" />
-        <p className="text-zinc-400">Loading album...</p>
-      </div>
-    );
-  }
-
+  if (isLoading) return <AlbumSkeleton />;
   if (error || !album) {
     return <EntityErrorCard entityType="album" error={error ?? null} entityId={id} />;
   }
 
   const totalDuration = album.songs.reduce((sum, song) => sum + song.duration, 0);
-  const albumTypeStyle = ALBUM_TYPE_STYLES[album.album_type] || ALBUM_TYPE_STYLES.album;
+  const typeLabel = ALBUM_TYPE_LABEL[album.album_type] || ALBUM_TYPE_LABEL.album;
+  const typeInfo = ALBUM_TYPE_INFO[album.album_type];
+  const isPopular = album.popularity != null && album.popularity >= 70;
 
-  // Convert platforms to PlatformInfo format for the grid
-  const platformsForGrid = album.platforms;
+  const facts = [
+    album.release_date ? formatDate(album.release_date) : album.year ? String(album.year) : null,
+    `${album.total_tracks} ${album.total_tracks === 1 ? "track" : "tracks"}`,
+    formatTotalDuration(totalDuration),
+    discGroups.length > 1 ? `${discGroups.length} discs` : null,
+  ];
+
+  const handleReportSubmit = async (report: CreateMetadataReportRequest) => {
+    await createReportMutation.mutateAsync(report);
+  };
 
   return (
-    <div className="space-y-8 animate-slide-up">
-      {/* Hero Section */}
-      <div className="relative">
-        {/* Background blur from cover */}
-        {album.cover_url && (
-          <div className="absolute inset-0 -z-10 overflow-hidden rounded-3xl">
-            <img
-              src={album.cover_url}
-              alt=""
-              className="w-full h-full object-cover blur-3xl opacity-20 scale-110"
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-bg-chassis/50 to-bg-chassis" />
-          </div>
-        )}
-
-        <div className="flex flex-col lg:flex-row gap-8 p-6 lg:p-8">
-          {/* Cover Art - Large */}
-          <div className="shrink-0 mx-auto lg:mx-0">
-            <CoverArt
-              src={album.cover_url}
-              alt={album.name}
-              size="hero"
-              className="shadow-2xl shadow-black/50"
-            />
-          </div>
-
-          {/* Album Info */}
-          <div className="flex-1 space-y-6 text-center lg:text-left">
-            {/* Title and Artist */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-center lg:justify-start gap-2">
-                <Badge variant={albumTypeStyle.variant} size="sm" className="font-semibold">
-                  {albumTypeStyle.label}
-                </Badge>
-                {album.popularity !== null && album.popularity !== undefined && album.popularity >= 70 && (
-                  <Badge variant="premium" size="sm">
-                    Popular
-                  </Badge>
-                )}
-              </div>
-              <h1 className="text-4xl lg:text-5xl font-black tracking-tight text-zinc-50">
-                {album.name}
-              </h1>
-              {album.artist_id ? (
-                <Link
-                  to="/artist/$id"
-                  params={{ id: album.artist_id }}
-                  className="text-xl text-zinc-400 hover:text-accent-needle transition-colors inline-block"
-                >
-                  {album.artist_name}
-                </Link>
-              ) : (
-                <p className="text-xl text-zinc-400">{album.artist_name}</p>
-              )}
-            </div>
-
-            {/* Quick Stats */}
-            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 text-sm">
-              {album.release_date ? (
-                <span className="px-3 py-1.5 rounded-full bg-bg-panel border border-zinc-800 text-zinc-300">
-                  {formatDate(album.release_date)}
-                </span>
-              ) : album.year && (
-                <span className="px-3 py-1.5 rounded-full bg-bg-panel border border-zinc-800 text-zinc-300">
-                  {album.year}
-                </span>
-              )}
-              <span className="px-3 py-1.5 rounded-full bg-bg-panel border border-zinc-800 text-zinc-300">
-                {album.total_tracks} {album.total_tracks === 1 ? "track" : "tracks"}
-              </span>
-              <span className="px-3 py-1.5 rounded-full bg-bg-panel border border-zinc-800 text-zinc-400 font-mono">
-                {formatTotalDuration(totalDuration)}
-              </span>
-              {discGroups.length > 1 && (
-                <span className="px-3 py-1.5 rounded-full bg-bg-panel border border-zinc-800 text-zinc-400">
-                  {discGroups.length} discs
-                </span>
-              )}
-            </div>
-
-            {/* Genres */}
-            {album.genres && album.genres.length > 0 && (
-              <div className="flex flex-wrap justify-center lg:justify-start gap-2">
-                {album.genres.map((genre) => (
-                  <Badge key={genre} variant="default">
-                    {genre}
-                  </Badge>
-                ))}
-              </div>
-            )}
-
-            {/* Label */}
-            {album.label && (
-              <p className="text-sm text-zinc-500">
-                <span className="text-zinc-600">Label:</span> {album.label}
-              </p>
-            )}
-
-            {/* Actions */}
-            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 pt-2">
-              {features.canDownload && album.songs.length > 0 && (
-                <Button variant="primary" size="lg" onClick={handleDownloadAll}>
-                  <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  Download Album
-                </Button>
-              )}
-
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => setShowMetadata(!showMetadata)}
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {showMetadata ? "Hide Details" : "Show Details"}
-              </Button>
-
-              <RefreshMetadataButton
-                entityId={id}
-                onRefresh={async () => {
-                  await refreshMetadata.mutateAsync(id);
-                }}
-                size="lg"
-              />
-
-              {isAuthenticated && (
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  onClick={() => setShowReportModal(true)}
-                >
-                  <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                  Report Issue
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Content Grid */}
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Left Column - Track List */}
-        <div className="lg:col-span-2">
-          {/* Track List */}
-          {album.songs.length > 0 && (
-            <Card variant="bordered">
-              <CardHeader className="border-b border-zinc-800/50">
-                <CardTitle className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-accent-needle" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                  </svg>
-                  Tracks
-                  <Badge variant="muted" size="sm">{album.total_tracks}</Badge>
-                </CardTitle>
-              </CardHeader>
-              <div>
-                {discGroups.map((group, groupIndex) => (
-                  <div key={group.discNumber}>
-                    {/* Disc Header (only for multi-disc albums) */}
-                    {group.isMultiDisc && (
-                      <div className="px-4 py-3 bg-zinc-900/50 border-b border-zinc-800/50">
-                        <div className="flex items-center gap-2">
-                          <svg className="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <span className="text-sm font-medium text-zinc-400">
-                            Disc {group.discNumber}
-                          </span>
-                          <span className="text-xs text-zinc-600">
-                            ({group.songs.length} {group.songs.length === 1 ? "track" : "tracks"})
-                          </span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Track Rows */}
-                    <div className={`divide-y divide-zinc-800/50 ${groupIndex < discGroups.length - 1 ? "border-b border-zinc-700/50" : ""}`}>
-                      {group.songs.map((song: any, index: number) => (
-                        <div
-                          key={song.id}
-                          className="flex items-center gap-4 px-4 py-3 hover:bg-zinc-800/30 transition-colors group"
-                        >
-                          {/* Track number */}
-                          <span className="w-8 text-center text-sm font-mono text-zinc-500">
-                            {String(song.track_number || index + 1).padStart(2, "0")}
-                          </span>
-
-                          {/* Info */}
-                          <div className="flex-1 min-w-0">
-                            <Link
-                              to="/song/$id"
-                              params={{ id: song.id }}
-                              className="font-medium text-zinc-100 hover:text-accent-needle transition-colors truncate block"
-                            >
-                              {song.name}
-                            </Link>
-                            {song.artist !== album.artist_name && (
-                              <p className="text-sm text-zinc-500 truncate">
-                                {song.artist}
-                              </p>
-                            )}
-                          </div>
-
-                          {/* Explicit badge */}
-                          {song.explicit && (
-                            <Badge variant="warning" size="sm">E</Badge>
-                          )}
-
-                          {/* Match count indicator */}
-                          {song.matches_count !== undefined && song.matches_count > 0 && (
-                            <span className="flex items-center gap-1 text-xs text-accent-needle" title={`${song.matches_count} cross-platform matches`}>
-                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                              </svg>
-                              {song.matches_count}
-                            </span>
-                          )}
-
-                          {/* Duration */}
-                          <span className="text-sm font-mono text-zinc-500">
-                            {formatDuration(song.duration)}
-                          </span>
-
-                          {/* Download button */}
-                          {features.canDownload && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                handleDownloadTrack(song);
-                              }}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                              </svg>
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
-        </div>
-
-        {/* Right Column - Metadata & Links */}
-        <div className="space-y-6">
-          {/* Platform Links */}
-          <Card variant="bordered">
-            <CardHeader className="border-b border-zinc-800/50">
-              <CardTitle className="text-base">Listen On</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <PlatformLinksGrid platforms={platformsForGrid} />
-            </CardContent>
-          </Card>
-
-          {/* Album Details */}
-          {showMetadata && (
-            <MetadataPanel
-              title="Album Details"
-              defaultOpen={true}
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+      className="space-y-8"
+    >
+      <EntityHeader
+        type="album"
+        name={album.name}
+        imageUrl={album.cover_url}
+        eyebrow={typeLabel}
+        badges={
+          isPopular ? (
+            <span className="rounded-full border border-primary/40 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">
+              Popular
+            </span>
+          ) : null
+        }
+        byline={
+          album.artist_id ? (
+            <Link
+              to="/artist/$id"
+              params={{ id: album.artist_id }}
+              className="font-medium text-foreground transition-colors hover:text-primary"
             >
-              <div className="space-y-3">
-                <MetadataField label="Title" value={album.name} />
-                <MetadataField label="Artist" value={album.artist_name} />
-                <MetadataField label="Type" value={albumTypeStyle.label} />
-                {album.release_date && (
-                  <MetadataField label="Release Date" value={formatDate(album.release_date)} />
-                )}
-                {!album.release_date && album.year && (
-                  <MetadataField label="Release Year" value={String(album.year)} />
-                )}
-                {album.label && (
-                  <MetadataField label="Label" value={album.label} />
-                )}
-                <MetadataField label="Tracks" value={String(album.total_tracks)} />
-                {discGroups.length > 1 && (
-                  <MetadataField label="Discs" value={String(discGroups.length)} />
-                )}
-                <MetadataField
-                  label="Duration"
-                  value={<span className="font-mono">{formatTotalDuration(totalDuration)}</span>}
-                />
-                {album.popularity !== null && album.popularity !== undefined && (
-                  <MetadataField label="Popularity" value={`${album.popularity}%`} />
-                )}
-                {album.genres && album.genres.length > 0 && (
-                  <MetadataField
-                    label="Genres"
-                    value={album.genres.join(", ")}
-                  />
-                )}
-              </div>
-            </MetadataPanel>
-          )}
+              {album.artist_name}
+            </Link>
+          ) : (
+            album.artist_name
+          )
+        }
+        facts={facts}
+        actions={
+          <>
+            {features.canDownload && album.songs.length > 0 && (
+              <Button variant="primary" onClick={handleDownloadAll}>
+                <Download />
+                Download album
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => setShowDetails((v) => !v)}>
+              <Info />
+              {showDetails ? "Hide details" : "Show details"}
+            </Button>
+            <RefreshMetadataButton
+              entityId={id}
+              onRefresh={async () => {
+                await refreshMetadata.mutateAsync(id);
+              }}
+            />
+            {isAuthenticated && (
+              <Button variant="ghost" onClick={() => setShowReportModal(true)}>
+                <Flag />
+                Report issue
+              </Button>
+            )}
+          </>
+        }
+      >
+        {album.genres && album.genres.length > 0 ? (
+          <div className="flex flex-wrap justify-center gap-1.5 sm:justify-start">
+            {album.genres.map((genre) => (
+              <span
+                key={genre}
+                className="rounded-md bg-surface px-2 py-0.5 text-xs text-muted-foreground"
+              >
+                {genre}
+              </span>
+            ))}
+          </div>
+        ) : null}
+        {album.label ? (
+          <p className="text-sm text-faint">
+            Label · <span className="text-muted-foreground">{album.label}</span>
+          </p>
+        ) : null}
+      </EntityHeader>
 
-          {/* Copyright Info */}
-          {showMetadata && album.copyright_text && (
-            <Card variant="bordered">
-              <CardHeader className="border-b border-zinc-800/50">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <svg className="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                  </svg>
-                  Rights Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-xs text-zinc-400 leading-relaxed">{album.copyright_text}</p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Quick Stats */}
-          <Card variant="bordered">
-            <CardContent className="py-4">
-              <div className="grid grid-cols-2 gap-4 text-center">
-                <div>
-                  <p className="text-2xl font-bold text-zinc-200">
-                    {album.total_tracks}
-                  </p>
-                  <p className="text-xs text-zinc-500 uppercase tracking-wide">
-                    Tracks
-                  </p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-zinc-200 font-mono">
-                    {formatTotalDuration(totalDuration)}
-                  </p>
-                  <p className="text-xs text-zinc-500 uppercase tracking-wide">
-                    Duration
-                  </p>
-                </div>
-              </div>
-              {discGroups.length > 1 && (
-                <div className="mt-4 pt-4 border-t border-zinc-800/50 text-center">
-                  <p className="text-xl font-bold text-zinc-300">
-                    {discGroups.length}
-                  </p>
-                  <p className="text-xs text-zinc-500 uppercase tracking-wide">
-                    Discs
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Album Type Info Card */}
-          {album.album_type && album.album_type !== "album" && (
-            <Card variant="bordered" className="overflow-hidden">
-              <div className={`p-4 ${
-                album.album_type === "single" ? "bg-amber-950/20" :
-                album.album_type === "ep" ? "bg-emerald-950/20" :
-                album.album_type === "compilation" ? "bg-violet-950/20" : ""
-              }`}>
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    album.album_type === "single" ? "bg-amber-900/50" :
-                    album.album_type === "ep" ? "bg-emerald-900/50" :
-                    album.album_type === "compilation" ? "bg-violet-900/50" : "bg-zinc-800"
-                  }`}>
-                    {album.album_type === "single" && (
-                      <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                      </svg>
-                    )}
-                    {album.album_type === "ep" && (
-                      <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                      </svg>
-                    )}
-                    {album.album_type === "compilation" && (
-                      <svg className="w-5 h-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                      </svg>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-zinc-200">
-                      {album.album_type === "single" ? "Single Release" :
-                       album.album_type === "ep" ? "Extended Play" :
-                       album.album_type === "compilation" ? "Compilation Album" : ""}
-                    </p>
-                    <p className="text-xs text-zinc-500">
-                      {album.album_type === "single" ? "1-3 tracks" :
-                       album.album_type === "ep" ? "4-6 tracks" :
-                       album.album_type === "compilation" ? "Various artists or greatest hits" : ""}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          )}
-        </div>
+      {/* Quick stats */}
+      <div className="grid grid-cols-2 gap-3 sm:max-w-md sm:grid-cols-3">
+        <StatCard label="Tracks" value={album.total_tracks} />
+        <StatCard label="Duration" value={formatTotalDuration(totalDuration)} mono />
+        {discGroups.length > 1 ? <StatCard label="Discs" value={discGroups.length} /> : null}
       </div>
 
-      {/* Report Modal */}
+      {/* Track list */}
+      {album.songs.length > 0 ? (
+        <section className="space-y-3">
+          <h2 className="font-display text-lg font-semibold tracking-tight text-foreground">
+            Tracks <span className="font-mono text-sm font-normal text-faint tnum">{album.total_tracks}</span>
+          </h2>
+          <TrackList<AlbumSong>
+            groups={discGroups.map((g) => ({
+              key: g.discNumber,
+              label: `Disc ${g.discNumber}`,
+              count: g.isMultiDisc ? g.songs.length : undefined,
+              tracks: g.songs as AlbumSong[],
+            }))}
+            numbering="track"
+            subtitle={(t) => (t.artist !== album.artist_name ? t.artist : null)}
+            onDownload={handleDownloadTrack}
+            canDownload={features.canDownload}
+          />
+        </section>
+      ) : null}
+
+      {/* Listen on */}
+      <section className="space-y-3">
+        <h2 className="font-display text-lg font-semibold tracking-tight text-foreground">Listen on</h2>
+        <PlatformLinksGrid platforms={album.platforms} />
+      </section>
+
+      {/* Album type info */}
+      {typeInfo ? (
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-4">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-surface text-primary">
+            <Disc3 className="size-5" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-foreground">{typeInfo.title}</p>
+            <p className="text-xs text-faint">{typeInfo.detail}</p>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Details */}
+      {showDetails ? (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <MetadataPanel title="Album Details" defaultOpen>
+            <div className="space-y-3">
+              <MetadataField label="Title" value={album.name} />
+              <MetadataField label="Artist" value={album.artist_name} />
+              <MetadataField label="Type" value={typeLabel} />
+              {album.release_date ? (
+                <MetadataField label="Release date" value={formatDate(album.release_date)} />
+              ) : album.year ? (
+                <MetadataField label="Release year" value={String(album.year)} />
+              ) : null}
+              {album.label ? <MetadataField label="Label" value={album.label} /> : null}
+              <MetadataField label="Tracks" value={String(album.total_tracks)} />
+              {discGroups.length > 1 ? (
+                <MetadataField label="Discs" value={String(discGroups.length)} />
+              ) : null}
+              <MetadataField
+                label="Duration"
+                value={<span className="font-mono tnum">{formatTotalDuration(totalDuration)}</span>}
+              />
+              {album.popularity != null ? (
+                <MetadataField label="Popularity" value={`${album.popularity}%`} />
+              ) : null}
+              {album.genres && album.genres.length > 0 ? (
+                <MetadataField label="Genres" value={album.genres.join(", ")} />
+              ) : null}
+            </div>
+          </MetadataPanel>
+
+          {album.copyright_text ? (
+            <div className="rounded-lg border border-border bg-card p-5">
+              <h3 className="flex items-center gap-2 font-display text-base font-semibold tracking-tight text-foreground">
+                <Copyright className="size-4 text-faint" />
+                Rights Information
+              </h3>
+              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                {album.copyright_text}
+              </p>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       <ReportModal
         isOpen={showReportModal}
         onClose={() => setShowReportModal(false)}
@@ -632,6 +404,6 @@ function AlbumPage() {
         entityName={album.name}
         fields={reportableFields}
       />
-    </div>
+    </motion.div>
   );
 }

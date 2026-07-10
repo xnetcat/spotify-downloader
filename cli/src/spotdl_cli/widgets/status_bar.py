@@ -19,8 +19,8 @@ class StatusBar(Widget):
         dock: bottom;
         height: 1;
         width: 100%;
-        background: #161819;
-        color: #a8a8b3;
+        background: #12151c;
+        color: #8b93a7;
     }
     StatusBar #status-hints {
         width: 1fr;

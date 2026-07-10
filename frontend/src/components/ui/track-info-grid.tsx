@@ -1,7 +1,8 @@
-import { clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { Music } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { EnhancedSong } from "@/types";
 import { Badge } from "./badge";
+import { Meter } from "./meter";
 import { AudioFeaturesSummary } from "./audio-features-panel";
 
 export interface TrackInfoGridProps {
@@ -38,7 +39,6 @@ function formatReleaseDate(dateStr: string | null): string {
   }
 }
 
-// Info item component
 interface InfoItemProps {
   label: string;
   value: React.ReactNode;
@@ -48,23 +48,15 @@ interface InfoItemProps {
 
 function InfoItem({ label, value, mono = false, className }: InfoItemProps) {
   return (
-    <div className={twMerge("flex flex-col gap-0.5", className)}>
-      <span className="text-xs text-[var(--color-text-dim)] uppercase tracking-wider">
-        {label}
-      </span>
-      <span
-        className={clsx(
-          "text-sm text-[var(--color-text-primary)]",
-          mono && "font-mono"
-        )}
-      >
+    <div className={cn("flex flex-col gap-0.5", className)}>
+      <span className="text-xs font-medium uppercase tracking-wider text-faint">{label}</span>
+      <span className={cn("text-sm text-foreground", mono && "font-mono tnum")}>
         {value || "--"}
       </span>
     </div>
   );
 }
 
-// Section header component
 interface SectionHeaderProps {
   title: string;
   className?: string;
@@ -73,10 +65,7 @@ interface SectionHeaderProps {
 function SectionHeader({ title, className }: SectionHeaderProps) {
   return (
     <h4
-      className={twMerge(
-        "text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3",
-        className
-      )}
+      className={cn("mb-3 text-xs font-medium uppercase tracking-wider text-faint", className)}
     >
       {title}
     </h4>
@@ -84,7 +73,7 @@ function SectionHeader({ title, className }: SectionHeaderProps) {
 }
 
 /**
- * Reusable grid layout for track information
+ * Reusable grid layout for track information.
  */
 export function TrackInfoGrid({
   track,
@@ -99,44 +88,31 @@ export function TrackInfoGrid({
 
   return (
     <div
-      className={twMerge(
-        clsx(
-          "bg-[var(--bg-panel)] border border-[var(--color-border-subtle)]",
-          "rounded-2xl p-5",
-          "transition-all duration-200",
-          "hover:border-[var(--color-border)]"
-        ),
+      className={cn(
+        "rounded-lg border border-border bg-card p-5 transition-colors hover:border-faint/50",
         className
       )}
     >
-      {/* Basic Info Section */}
+      {/* Basic info */}
       <section className="mb-5">
-        <SectionHeader title="Track Info" />
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          <InfoItem
-            label="Duration"
-            value={formatDuration(track.duration)}
-            mono
-          />
-          <InfoItem
-            label="Release Date"
-            value={formatReleaseDate(track.release_date)}
-          />
-          {track.year && (
-            <InfoItem label="Year" value={track.year} mono />
-          )}
+        <SectionHeader title="Track info" />
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <InfoItem label="Duration" value={formatDuration(track.duration)} mono />
+          <InfoItem label="Release date" value={formatReleaseDate(track.release_date)} />
+          {track.year && <InfoItem label="Year" value={track.year} mono />}
           {track.popularity !== null && (
             <InfoItem
               label="Popularity"
               value={
                 <div className="flex items-center gap-2">
-                  <span className="font-mono">{track.popularity}</span>
-                  <div className="flex-1 h-1 bg-[var(--bg-surface)] rounded-full overflow-hidden max-w-[60px]">
-                    <div
-                      className="h-full bg-[var(--accent-safe)] rounded-full"
-                      style={{ width: `${track.popularity}%` }}
-                    />
-                  </div>
+                  <span className="font-mono tnum">{track.popularity}</span>
+                  <Meter
+                    value={track.popularity}
+                    max={100}
+                    cells={10}
+                    className="max-w-[60px] flex-1"
+                    label={`Popularity ${track.popularity}%`}
+                  />
                 </div>
               }
             />
@@ -144,45 +120,32 @@ export function TrackInfoGrid({
         </div>
       </section>
 
-      {/* Track Position */}
+      {/* Track position */}
       {hasTrackPosition && (
         <section className="mb-5">
-          <SectionHeader title="Track Position" />
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <SectionHeader title="Track position" />
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             {track.track_number !== null && (
-              <InfoItem
-                label="Track #"
-                value={track.track_number}
-                mono
-              />
+              <InfoItem label="Track #" value={track.track_number} mono />
             )}
             {track.disc_number !== null && (
-              <InfoItem
-                label="Disc #"
-                value={track.disc_number}
-                mono
-              />
+              <InfoItem label="Disc #" value={track.disc_number} mono />
             )}
-            {track.album_name && (
-              <InfoItem
-                label="Album"
-                value={track.album_name}
-              />
-            )}
+            {track.album_name && <InfoItem label="Album" value={track.album_name} />}
           </div>
         </section>
       )}
 
-      {/* Technical Info */}
+      {/* Technical info */}
       {showTechnical && (
         <section className="mb-5">
           <SectionHeader title="Technical" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {track.isrc && (
               <InfoItem
                 label="ISRC"
                 value={
-                  <span className="font-mono text-xs bg-[var(--bg-surface)] px-2 py-1 rounded">
+                  <span className="rounded bg-surface px-2 py-1 font-mono tnum text-xs">
                     {track.isrc}
                   </span>
                 }
@@ -196,14 +159,14 @@ export function TrackInfoGrid({
                     {track.platforms.slice(0, 3).map((p) => (
                       <span
                         key={`${p.platform}-${p.platform_id}`}
-                        className="text-xs bg-[var(--bg-surface)] px-2 py-0.5 rounded font-mono"
+                        className="rounded bg-surface px-2 py-0.5 font-mono tnum text-xs"
                         title={`${p.platform}: ${p.platform_id}`}
                       >
-                        {p.platform.charAt(0).toUpperCase()}: {p.platform_id.slice(0, 8)}...
+                        {p.platform.charAt(0).toUpperCase()}: {p.platform_id.slice(0, 8)}…
                       </span>
                     ))}
                     {track.platforms.length > 3 && (
-                      <span className="text-xs text-[var(--color-text-dim)]">
+                      <span className="text-xs text-faint">
                         +{track.platforms.length - 3} more
                       </span>
                     )}
@@ -213,32 +176,22 @@ export function TrackInfoGrid({
             )}
             <InfoItem
               label="Matches"
-              value={
-                <span className="font-mono text-[var(--accent-safe)]">
-                  {track.matches_count}
-                </span>
-              }
+              value={<span className="font-mono tnum text-success">{track.matches_count}</span>}
             />
           </div>
         </section>
       )}
 
-      {/* Label & Copyright */}
+      {/* Label & copyright */}
       {hasLabelInfo && (
         <section className="mb-5">
-          <SectionHeader title="Label & Copyright" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {track.label && (
-              <InfoItem label="Label" value={track.label} />
-            )}
+          <SectionHeader title="Label & copyright" />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {track.label && <InfoItem label="Label" value={track.label} />}
             {track.copyright_text && (
               <InfoItem
                 label="Copyright"
-                value={
-                  <span className="text-xs text-[var(--color-text-muted)]">
-                    {track.copyright_text}
-                  </span>
-                }
+                value={<span className="text-xs text-muted-foreground">{track.copyright_text}</span>}
               />
             )}
           </div>
@@ -251,11 +204,7 @@ export function TrackInfoGrid({
           <SectionHeader title="Genres" />
           <div className="flex flex-wrap gap-2">
             {track.genres.map((genre) => (
-              <Badge
-                key={genre}
-                variant="default"
-                size="sm"
-              >
+              <Badge key={genre} variant="default" size="sm">
                 {genre}
               </Badge>
             ))}
@@ -263,7 +212,7 @@ export function TrackInfoGrid({
         </section>
       )}
 
-      {/* Explicit & Other Flags */}
+      {/* Flags */}
       <section className="mb-5">
         <SectionHeader title="Flags" />
         <div className="flex flex-wrap gap-2">
@@ -279,10 +228,10 @@ export function TrackInfoGrid({
         </div>
       </section>
 
-      {/* Audio Features Summary */}
+      {/* Audio features summary */}
       {showAudioFeatures && track.audio_features && (
         <section>
-          <SectionHeader title="Audio Features" />
+          <SectionHeader title="Audio features" />
           <AudioFeaturesSummary features={track.audio_features} />
         </section>
       )}
@@ -291,7 +240,7 @@ export function TrackInfoGrid({
 }
 
 /**
- * Compact track info row for use in lists
+ * Compact track info row for use in lists.
  */
 export interface TrackInfoRowProps {
   track: EnhancedSong;
@@ -309,19 +258,12 @@ export function TrackInfoRow({
   className,
 }: TrackInfoRowProps) {
   return (
-    <div
-      className={twMerge(
-        "flex items-center gap-3 text-sm text-[var(--color-text-muted)]",
-        className
-      )}
-    >
-      {showDuration && (
-        <span className="font-mono">{formatDuration(track.duration)}</span>
-      )}
+    <div className={cn("flex items-center gap-3 text-sm text-muted-foreground", className)}>
+      {showDuration && <span className="font-mono tnum">{formatDuration(track.duration)}</span>}
       {showYear && track.year && (
         <>
-          <span className="text-[var(--color-text-dim)]">/</span>
-          <span>{track.year}</span>
+          <span className="text-faint">/</span>
+          <span className="font-mono tnum">{track.year}</span>
         </>
       )}
       {showExplicit && track.explicit && (
@@ -331,8 +273,8 @@ export function TrackInfoRow({
       )}
       {track.isrc && (
         <>
-          <span className="text-[var(--color-text-dim)]">/</span>
-          <span className="font-mono text-xs">{track.isrc}</span>
+          <span className="text-faint">/</span>
+          <span className="font-mono tnum text-xs">{track.isrc}</span>
         </>
       )}
     </div>
@@ -340,7 +282,7 @@ export function TrackInfoRow({
 }
 
 /**
- * Mini track card for compact displays
+ * Mini track card for compact displays.
  */
 export interface MiniTrackCardProps {
   track: EnhancedSong;
@@ -348,68 +290,34 @@ export interface MiniTrackCardProps {
   className?: string;
 }
 
-export function MiniTrackCard({
-  track,
-  onClick,
-  className,
-}: MiniTrackCardProps) {
+export function MiniTrackCard({ track, onClick, className }: MiniTrackCardProps) {
   return (
     <div
-      className={twMerge(
-        clsx(
-          "flex items-center gap-3 p-3",
-          "bg-[var(--bg-surface)] rounded-xl",
-          "border border-[var(--color-border-subtle)]",
-          "transition-all duration-200",
-          "hover:border-[var(--color-border)]",
-          onClick && "cursor-pointer hover:bg-[var(--bg-hover)]"
-        ),
+      className={cn(
+        "flex items-center gap-3 rounded-lg border border-border bg-surface p-3 transition-colors hover:border-faint/50",
+        onClick && "cursor-pointer hover:bg-elevated/60",
         className
       )}
       onClick={onClick}
     >
-      {/* Cover art placeholder */}
-      <div
-        className={clsx(
-          "w-12 h-12 rounded-lg flex-shrink-0",
-          "bg-[var(--bg-panel)] flex items-center justify-center"
-        )}
-      >
+      <div className="flex size-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-card">
         {track.cover_url ? (
           <img
             src={track.cover_url}
             alt={track.name}
-            className="w-full h-full object-cover rounded-lg"
+            className="h-full w-full object-cover"
           />
         ) : (
-          <svg
-            className="w-5 h-5 text-[var(--color-text-dim)]"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-            />
-          </svg>
+          <Music className="size-5 text-faint" />
         )}
       </div>
 
-      {/* Track info */}
-      <div className="flex-1 min-w-0">
-        <h4 className="text-sm font-medium text-[var(--color-text-primary)] truncate">
-          {track.name}
-        </h4>
-        <p className="text-xs text-[var(--color-text-muted)] truncate">
-          {track.artist}
-        </p>
+      <div className="min-w-0 flex-1">
+        <h4 className="truncate text-sm font-medium text-foreground">{track.name}</h4>
+        <p className="truncate text-xs text-muted-foreground">{track.artist}</p>
       </div>
 
-      {/* Duration */}
-      <span className="text-xs font-mono text-[var(--color-text-dim)] flex-shrink-0">
+      <span className="flex-shrink-0 font-mono tnum text-xs text-faint">
         {formatDuration(track.duration)}
       </span>
     </div>

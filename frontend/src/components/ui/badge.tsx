@@ -1,66 +1,62 @@
 import { type HTMLAttributes, forwardRef } from "react";
-import { clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { cva, type VariantProps } from "class-variance-authority";
+import { cn } from "@/lib/utils";
 
-export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
-  variant?: "default" | "success" | "warning" | "error" | "info" | "premium" | "muted";
-  size?: "sm" | "md";
+const badgeVariants = cva(
+  cn(
+    "inline-flex items-center gap-1.5 rounded-full border font-medium",
+    "transition-colors"
+  ),
+  {
+    variants: {
+      variant: {
+        default: "border-border bg-surface text-muted-foreground",
+        success: "border-success/30 bg-success/10 text-success",
+        warning: "border-warning/30 bg-warning/10 text-warning",
+        error: "border-destructive/30 bg-destructive/10 text-destructive",
+        info: "border-info/30 bg-info/10 text-info",
+        premium: "border-primary/30 bg-primary/10 text-primary",
+        muted: "border-border/60 bg-transparent text-faint",
+      },
+      size: {
+        sm: "px-2 py-0.5 text-[10px]",
+        md: "px-2.5 py-0.5 text-xs",
+      },
+    },
+    defaultVariants: { variant: "default", size: "md" },
+  }
+);
+
+export interface BadgeProps
+  extends HTMLAttributes<HTMLSpanElement>,
+    VariantProps<typeof badgeVariants> {
   pulse?: boolean;
 }
 
+const pulseColors: Record<string, string> = {
+  default: "bg-muted-foreground",
+  success: "bg-success",
+  warning: "bg-warning",
+  error: "bg-destructive",
+  info: "bg-info",
+  premium: "bg-primary",
+  muted: "bg-faint",
+};
+
 export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
   ({ className, variant = "default", size = "md", pulse = false, children, ...props }, ref) => {
-    const variants = {
-      default: "bg-zinc-800 text-zinc-300 border-zinc-700",
-      success: "bg-emerald-950/50 text-emerald-400 border-emerald-800/50",
-      warning: "bg-amber-950/50 text-amber-400 border-amber-800/50",
-      error: "bg-red-950/50 text-red-400 border-red-800/50",
-      info: "bg-sky-950/50 text-sky-400 border-sky-800/50",
-      premium: "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white border-violet-500/30",
-      muted: "bg-zinc-900/50 text-zinc-500 border-zinc-800/50",
-    };
-
-    const sizes = {
-      sm: "px-2 py-0.5 text-[10px]",
-      md: "px-2.5 py-1 text-xs",
-    };
-
+    const dot = pulseColors[variant ?? "default"] ?? pulseColors.default;
     return (
-      <span
-        ref={ref}
-        className={twMerge(
-          clsx(
-            "inline-flex items-center gap-1.5 rounded-lg font-medium border",
-            "transition-colors duration-200",
-            variants[variant],
-            sizes[size],
-            className
-          )
-        )}
-        {...props}
-      >
+      <span ref={ref} className={cn(badgeVariants({ variant, size }), className)} {...props}>
         {pulse && (
-          <span className="relative flex h-2 w-2">
-            <span className={clsx(
-              "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",
-              variant === "success" && "bg-emerald-400",
-              variant === "warning" && "bg-amber-400",
-              variant === "error" && "bg-red-400",
-              variant === "info" && "bg-sky-400",
-              variant === "default" && "bg-zinc-400",
-              variant === "premium" && "bg-violet-400",
-              variant === "muted" && "bg-zinc-600"
-            )} />
-            <span className={clsx(
-              "relative inline-flex rounded-full h-2 w-2",
-              variant === "success" && "bg-emerald-500",
-              variant === "warning" && "bg-amber-500",
-              variant === "error" && "bg-red-500",
-              variant === "info" && "bg-sky-500",
-              variant === "default" && "bg-zinc-500",
-              variant === "premium" && "bg-violet-500",
-              variant === "muted" && "bg-zinc-700"
-            )} />
+          <span className="relative flex size-1.5">
+            <span
+              className={cn(
+                "absolute inline-flex h-full w-full animate-ping rounded-full opacity-75",
+                dot
+              )}
+            />
+            <span className={cn("relative inline-flex size-1.5 rounded-full", dot)} />
           </span>
         )}
         {children}
@@ -71,19 +67,26 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
 
 Badge.displayName = "Badge";
 
-// Platform-specific badge
+// Platform-specific badge — brand identity dot + label.
 export interface PlatformBadgeProps extends HTMLAttributes<HTMLSpanElement> {
-  platform: "spotify" | "apple_music" | "deezer" | "youtube" | "youtube_music" | "soundcloud" | "bandcamp";
+  platform:
+    | "spotify"
+    | "apple_music"
+    | "deezer"
+    | "youtube"
+    | "youtube_music"
+    | "soundcloud"
+    | "bandcamp";
 }
 
-const platformStyles: Record<string, { bg: string; text: string; icon?: string }> = {
-  spotify: { bg: "bg-[#1db954]", text: "text-white" },
-  apple_music: { bg: "bg-gradient-to-r from-[#fc3c44] to-[#fa233b]", text: "text-white" },
-  deezer: { bg: "bg-[#a238ff]", text: "text-white" },
-  youtube: { bg: "bg-[#ff0000]", text: "text-white" },
-  youtube_music: { bg: "bg-[#ff0000]", text: "text-white" },
-  soundcloud: { bg: "bg-gradient-to-r from-[#ff5500] to-[#ff7700]", text: "text-white" },
-  bandcamp: { bg: "bg-[#1da0c3]", text: "text-white" },
+const platformDotColor: Record<string, string> = {
+  spotify: "bg-spotify",
+  apple_music: "bg-apple",
+  deezer: "bg-deezer",
+  youtube: "bg-youtube",
+  youtube_music: "bg-ytmusic",
+  soundcloud: "bg-soundcloud",
+  bandcamp: "bg-bandcamp",
 };
 
 const platformNames: Record<string, string> = {
@@ -98,22 +101,17 @@ const platformNames: Record<string, string> = {
 
 export const PlatformBadge = forwardRef<HTMLSpanElement, PlatformBadgeProps>(
   ({ platform, className, ...props }, ref) => {
-    const style = platformStyles[platform] || platformStyles.spotify;
-
+    const dot = platformDotColor[platform] ?? platformDotColor.spotify;
     return (
       <span
         ref={ref}
-        className={twMerge(
-          clsx(
-            "inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold",
-            "shadow-sm",
-            style.bg,
-            style.text,
-            className
-          )
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-0.5 text-xs font-medium text-foreground",
+          className
         )}
         {...props}
       >
+        <span className={cn("size-1.5 rounded-full", dot)} aria-hidden />
         {platformNames[platform] || platform}
       </span>
     );

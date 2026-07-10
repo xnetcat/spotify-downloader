@@ -43,12 +43,7 @@ describe("DataTable", () => {
 
     it("renders empty message when data is empty", () => {
       render(
-        <DataTable
-          data={[]}
-          columns={columns}
-          rowKey="id"
-          emptyMessage="No users found"
-        />
+        <DataTable data={[]} columns={columns} rowKey="id" emptyMessage="No users found" />
       );
 
       expect(screen.getByText("No users found")).toBeInTheDocument();
@@ -71,10 +66,8 @@ describe("DataTable", () => {
     it("handles null values in cells", () => {
       render(<DataTable data={mockData} columns={columns} rowKey="id" />);
 
-      // Bob's email is null, should just render empty
       const table = screen.getByRole("table");
       const rows = within(table).getAllByRole("row");
-      // Find Bob's row (header + data rows, Bob is second data row)
       const bobRow = rows[2];
       expect(bobRow).toBeInTheDocument();
     });
@@ -86,19 +79,15 @@ describe("DataTable", () => {
         <DataTable data={mockData} columns={columns} rowKey="id" isLoading />
       );
 
-      // Should show shimmer elements instead of actual data
-      const shimmers = container.querySelectorAll(".shimmer");
-      expect(shimmers.length).toBeGreaterThan(0);
+      const skeletons = container.querySelectorAll(".animate-pulse");
+      expect(skeletons.length).toBeGreaterThan(0);
     });
 
     it("shows 5 skeleton rows by default", () => {
-      render(
-        <DataTable data={mockData} columns={columns} rowKey="id" isLoading />
-      );
+      render(<DataTable data={mockData} columns={columns} rowKey="id" isLoading />);
 
       const table = screen.getByRole("table");
       const tbody = table.querySelector("tbody");
-      // 5 skeleton rows
       expect(tbody?.querySelectorAll("tr").length).toBe(5);
     });
   });
@@ -109,7 +98,6 @@ describe("DataTable", () => {
         <DataTable data={mockData} columns={columns} rowKey="id" />
       );
 
-      // Both Name and Age are sortable
       const sortIcons = container.querySelectorAll("th svg");
       expect(sortIcons.length).toBe(2);
     });
@@ -117,56 +105,38 @@ describe("DataTable", () => {
     it("sorts data ascending on first click", () => {
       render(<DataTable data={mockData} columns={columns} rowKey="id" />);
 
-      const nameHeader = screen.getByText("Name");
-      fireEvent.click(nameHeader);
+      fireEvent.click(screen.getByText("Name"));
 
-      const table = screen.getByRole("table");
-      const rows = within(table).getAllByRole("row");
-
-      // First row is header, data rows start at index 1
-      // After ascending sort by name: Alice, Bob, Charlie, Diana
+      const rows = within(screen.getByRole("table")).getAllByRole("row");
       expect(within(rows[1]).getByText("Alice")).toBeInTheDocument();
     });
 
     it("sorts data descending on second click", () => {
       render(<DataTable data={mockData} columns={columns} rowKey="id" />);
 
-      const nameHeader = screen.getByText("Name");
-      // First click - ascending
-      fireEvent.click(nameHeader);
-      // Second click - descending
-      fireEvent.click(nameHeader);
+      fireEvent.click(screen.getByText("Name"));
+      fireEvent.click(screen.getByText("Name"));
 
-      const table = screen.getByRole("table");
-      const rows = within(table).getAllByRole("row");
-
-      // After descending sort by name: Diana, Charlie, Bob, Alice
+      const rows = within(screen.getByRole("table")).getAllByRole("row");
       expect(within(rows[1]).getByText("Diana")).toBeInTheDocument();
     });
 
     it("sorts numeric columns correctly", () => {
       render(<DataTable data={mockData} columns={columns} rowKey="id" />);
 
-      const ageHeader = screen.getByText("Age");
-      fireEvent.click(ageHeader);
+      fireEvent.click(screen.getByText("Age"));
 
-      const table = screen.getByRole("table");
-      const rows = within(table).getAllByRole("row");
-
-      // After ascending sort by age: Bob (25), Diana (28), Alice (30), Charlie (35)
+      const rows = within(screen.getByRole("table")).getAllByRole("row");
       expect(within(rows[1]).getByText("Bob")).toBeInTheDocument();
     });
 
     it("does not sort non-sortable columns", () => {
       render(<DataTable data={mockData} columns={columns} rowKey="id" />);
 
-      const emailHeader = screen.getByText("Email");
       const initialOrder = screen.getAllByRole("row");
-
-      fireEvent.click(emailHeader);
-
+      fireEvent.click(screen.getByText("Email"));
       const afterClickOrder = screen.getAllByRole("row");
-      // Order should remain the same
+
       expect(initialOrder.length).toBe(afterClickOrder.length);
     });
   });
@@ -185,14 +155,11 @@ describe("DataTable", () => {
       );
 
       const checkboxes = screen.getAllByRole("checkbox");
-      // 1 header checkbox + 4 row checkboxes
       expect(checkboxes.length).toBe(5);
     });
 
     it("does not show checkboxes when selectable is false", () => {
-      render(
-        <DataTable data={mockData} columns={columns} rowKey="id" />
-      );
+      render(<DataTable data={mockData} columns={columns} rowKey="id" />);
 
       expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     });
@@ -211,7 +178,6 @@ describe("DataTable", () => {
       );
 
       const checkboxes = screen.getAllByRole("checkbox");
-      // Click first row checkbox (index 1, after header)
       fireEvent.click(checkboxes[1]);
 
       expect(handleSelectionChange).toHaveBeenCalledWith(new Set(["1"]));
@@ -230,13 +196,9 @@ describe("DataTable", () => {
         />
       );
 
-      const checkboxes = screen.getAllByRole("checkbox");
-      // Click header checkbox (index 0)
-      fireEvent.click(checkboxes[0]);
+      fireEvent.click(screen.getAllByRole("checkbox")[0]);
 
-      expect(handleSelectionChange).toHaveBeenCalledWith(
-        new Set(["1", "2", "3", "4"])
-      );
+      expect(handleSelectionChange).toHaveBeenCalledWith(new Set(["1", "2", "3", "4"]));
     });
 
     it("calls onSelectionChange to clear all when header checkbox is clicked while all selected", () => {
@@ -252,9 +214,7 @@ describe("DataTable", () => {
         />
       );
 
-      const checkboxes = screen.getAllByRole("checkbox");
-      // Click header checkbox to deselect all
-      fireEvent.click(checkboxes[0]);
+      fireEvent.click(screen.getAllByRole("checkbox")[0]);
 
       expect(handleSelectionChange).toHaveBeenCalledWith(new Set());
     });
@@ -271,8 +231,8 @@ describe("DataTable", () => {
         />
       );
 
-      const headerCheckbox = screen.getAllByRole("checkbox")[0] as HTMLInputElement;
-      expect(headerCheckbox.indeterminate).toBe(true);
+      const headerCheckbox = screen.getAllByRole("checkbox")[0];
+      expect(headerCheckbox).toHaveAttribute("aria-checked", "mixed");
     });
 
     it("removes selection when clicking selected row checkbox", () => {
@@ -288,9 +248,7 @@ describe("DataTable", () => {
         />
       );
 
-      const checkboxes = screen.getAllByRole("checkbox");
-      // Click first row checkbox to deselect
-      fireEvent.click(checkboxes[1]);
+      fireEvent.click(screen.getAllByRole("checkbox")[1]);
 
       expect(handleSelectionChange).toHaveBeenCalledWith(new Set());
     });
@@ -300,17 +258,10 @@ describe("DataTable", () => {
     it("calls onRowClick when row is clicked", () => {
       const handleRowClick = vi.fn();
       render(
-        <DataTable
-          data={mockData}
-          columns={columns}
-          rowKey="id"
-          onRowClick={handleRowClick}
-        />
+        <DataTable data={mockData} columns={columns} rowKey="id" onRowClick={handleRowClick} />
       );
 
-      const table = screen.getByRole("table");
-      const rows = within(table).getAllByRole("row");
-      // Click first data row
+      const rows = within(screen.getByRole("table")).getAllByRole("row");
       fireEvent.click(rows[1]);
 
       expect(handleRowClick).toHaveBeenCalledWith(mockData[0]);
@@ -318,12 +269,7 @@ describe("DataTable", () => {
 
     it("applies cursor-pointer class when onRowClick is provided", () => {
       const { container } = render(
-        <DataTable
-          data={mockData}
-          columns={columns}
-          rowKey="id"
-          onRowClick={() => {}}
-        />
+        <DataTable data={mockData} columns={columns} rowKey="id" onRowClick={() => {}} />
       );
 
       const dataRows = container.querySelectorAll("tbody tr");
@@ -344,9 +290,7 @@ describe("DataTable", () => {
         },
       ];
 
-      render(
-        <DataTable data={mockData} columns={columnsWithRender} rowKey="id" />
-      );
+      render(<DataTable data={mockData} columns={columnsWithRender} rowKey="id" />);
 
       const customElements = screen.getAllByTestId("custom-render");
       expect(customElements.length).toBe(4);
@@ -360,7 +304,6 @@ describe("DataTable", () => {
         <DataTable data={mockData} columns={columns} rowKey="id" />
       );
 
-      // Age column has align: "right"
       const ageHeader = container.querySelectorAll("th")[1];
       expect(ageHeader).toHaveClass("text-right");
     });
@@ -385,8 +328,7 @@ describe("DataTable", () => {
         <DataTable data={mockData} columns={columns} rowKey="id" stickyHeader />
       );
 
-      const thead = container.querySelector("thead");
-      expect(thead).toHaveClass("sticky");
+      expect(container.querySelector("thead")).toHaveClass("sticky");
     });
 
     it("does not apply sticky class by default", () => {
@@ -394,24 +336,21 @@ describe("DataTable", () => {
         <DataTable data={mockData} columns={columns} rowKey="id" />
       );
 
-      const thead = container.querySelector("thead");
-      expect(thead).not.toHaveClass("sticky");
+      expect(container.querySelector("thead")).not.toHaveClass("sticky");
     });
   });
 
   describe("rowKey function", () => {
     it("uses rowKey function when provided", () => {
-      const handleRowClick = vi.fn();
       render(
         <DataTable
           data={mockData}
           columns={columns}
           rowKey={(row) => `custom-${row.id}`}
-          onRowClick={handleRowClick}
+          onRowClick={() => {}}
         />
       );
 
-      // Should render without errors
       expect(screen.getByText("Alice")).toBeInTheDocument();
     });
   });
@@ -426,9 +365,7 @@ describe("DataTable", () => {
         },
       ];
 
-      render(
-        <DataTable data={mockData} columns={columnsWithAccessorFn} rowKey="id" />
-      );
+      render(<DataTable data={mockData} columns={columnsWithAccessorFn} rowKey="id" />);
 
       expect(screen.getByText("Alice (30)")).toBeInTheDocument();
       expect(screen.getByText("Bob (25)")).toBeInTheDocument();
@@ -439,9 +376,7 @@ describe("DataTable", () => {
 describe("Pagination", () => {
   describe("rendering", () => {
     it("renders pagination buttons", () => {
-      render(
-        <Pagination currentPage={1} totalPages={5} onPageChange={() => {}} />
-      );
+      render(<Pagination currentPage={1} totalPages={5} onPageChange={() => {}} />);
 
       expect(screen.getByText("Previous")).toBeInTheDocument();
       expect(screen.getByText("Next")).toBeInTheDocument();
@@ -450,22 +385,14 @@ describe("Pagination", () => {
     });
 
     it("highlights current page", () => {
-      render(
-        <Pagination currentPage={3} totalPages={5} onPageChange={() => {}} />
-      );
+      render(<Pagination currentPage={3} totalPages={5} onPageChange={() => {}} />);
 
-      const currentPageButton = screen.getByText("3");
-      expect(currentPageButton).toHaveClass("bg-[var(--accent-safe)]");
+      expect(screen.getByText("3")).toHaveClass("bg-primary");
     });
 
     it("applies custom className", () => {
       const { container } = render(
-        <Pagination
-          currentPage={1}
-          totalPages={5}
-          onPageChange={() => {}}
-          className="custom-pagination"
-        />
+        <Pagination currentPage={1} totalPages={5} onPageChange={() => {}} className="custom-pagination" />
       );
 
       expect(container.firstChild).toHaveClass("custom-pagination");
@@ -475,9 +402,7 @@ describe("Pagination", () => {
   describe("navigation", () => {
     it("calls onPageChange when page button is clicked", () => {
       const handlePageChange = vi.fn();
-      render(
-        <Pagination currentPage={1} totalPages={5} onPageChange={handlePageChange} />
-      );
+      render(<Pagination currentPage={1} totalPages={5} onPageChange={handlePageChange} />);
 
       fireEvent.click(screen.getByText("3"));
       expect(handlePageChange).toHaveBeenCalledWith(3);
@@ -485,9 +410,7 @@ describe("Pagination", () => {
 
     it("calls onPageChange when Next is clicked", () => {
       const handlePageChange = vi.fn();
-      render(
-        <Pagination currentPage={2} totalPages={5} onPageChange={handlePageChange} />
-      );
+      render(<Pagination currentPage={2} totalPages={5} onPageChange={handlePageChange} />);
 
       fireEvent.click(screen.getByText("Next"));
       expect(handlePageChange).toHaveBeenCalledWith(3);
@@ -495,9 +418,7 @@ describe("Pagination", () => {
 
     it("calls onPageChange when Previous is clicked", () => {
       const handlePageChange = vi.fn();
-      render(
-        <Pagination currentPage={3} totalPages={5} onPageChange={handlePageChange} />
-      );
+      render(<Pagination currentPage={3} totalPages={5} onPageChange={handlePageChange} />);
 
       fireEvent.click(screen.getByText("Previous"));
       expect(handlePageChange).toHaveBeenCalledWith(2);
@@ -506,25 +427,19 @@ describe("Pagination", () => {
 
   describe("disabled states", () => {
     it("disables Previous button on first page", () => {
-      render(
-        <Pagination currentPage={1} totalPages={5} onPageChange={() => {}} />
-      );
+      render(<Pagination currentPage={1} totalPages={5} onPageChange={() => {}} />);
 
       expect(screen.getByText("Previous")).toBeDisabled();
     });
 
     it("disables Next button on last page", () => {
-      render(
-        <Pagination currentPage={5} totalPages={5} onPageChange={() => {}} />
-      );
+      render(<Pagination currentPage={5} totalPages={5} onPageChange={() => {}} />);
 
       expect(screen.getByText("Next")).toBeDisabled();
     });
 
     it("enables both buttons on middle pages", () => {
-      render(
-        <Pagination currentPage={3} totalPages={5} onPageChange={() => {}} />
-      );
+      render(<Pagination currentPage={3} totalPages={5} onPageChange={() => {}} />);
 
       expect(screen.getByText("Previous")).not.toBeDisabled();
       expect(screen.getByText("Next")).not.toBeDisabled();
@@ -533,21 +448,16 @@ describe("Pagination", () => {
 
   describe("ellipsis", () => {
     it("shows ellipsis for many pages", () => {
-      render(
-        <Pagination currentPage={5} totalPages={10} onPageChange={() => {}} />
-      );
+      render(<Pagination currentPage={5} totalPages={10} onPageChange={() => {}} />);
 
-      // Should show ellipsis when there are gaps
-      const ellipses = screen.getAllByText("...");
+      const ellipses = screen.getAllByText("…");
       expect(ellipses.length).toBeGreaterThanOrEqual(1);
     });
 
     it("does not show ellipsis for few pages", () => {
-      render(
-        <Pagination currentPage={2} totalPages={3} onPageChange={() => {}} />
-      );
+      render(<Pagination currentPage={2} totalPages={3} onPageChange={() => {}} />);
 
-      expect(screen.queryByText("...")).not.toBeInTheDocument();
+      expect(screen.queryByText("…")).not.toBeInTheDocument();
     });
   });
 });

@@ -5,51 +5,45 @@ import { Spinner, Loading, WaveformLoader, EqualizerLoader, Skeleton } from "../
 describe("Spinner", () => {
   it("renders the spinner", () => {
     const { container } = render(<Spinner />);
-    const spinner = container.firstChild;
-    expect(spinner).toBeInTheDocument();
+    expect(container.firstChild).toBeInTheDocument();
   });
 
   it("renders with default size (md)", () => {
     const { container } = render(<Spinner />);
-    const spinner = container.firstChild;
-    expect(spinner).toHaveClass("h-8", "w-8");
+    expect(container.querySelector("svg")).toHaveClass("size-8");
   });
 
   it("renders with small size", () => {
     const { container } = render(<Spinner size="sm" />);
-    const spinner = container.firstChild;
-    expect(spinner).toHaveClass("h-4", "w-4");
+    expect(container.querySelector("svg")).toHaveClass("size-4");
   });
 
   it("renders with large size", () => {
     const { container } = render(<Spinner size="lg" />);
-    const spinner = container.firstChild;
-    expect(spinner).toHaveClass("h-12", "w-12");
+    expect(container.querySelector("svg")).toHaveClass("size-12");
   });
 
   it("applies custom className", () => {
     const { container } = render(<Spinner className="custom-spinner" />);
-    const spinner = container.firstChild;
-    expect(spinner).toHaveClass("custom-spinner");
+    expect(container.firstChild).toHaveClass("custom-spinner");
   });
 
   it("is animated", () => {
     const { container } = render(<Spinner />);
-    const spinner = container.firstChild;
-    expect(spinner).toHaveClass("animate-spin");
+    expect(container.querySelector("svg")).toHaveClass("animate-spin");
   });
 
-  it("has rounded full style", () => {
+  it("exposes a loading status role", () => {
     const { container } = render(<Spinner />);
-    const spinner = container.firstChild;
-    expect(spinner).toHaveClass("rounded-full");
+    expect(container.firstChild).toHaveAttribute("role", "status");
+    expect(container.firstChild).toHaveAttribute("aria-label", "Loading");
   });
 });
 
 describe("Loading", () => {
-  it("renders with text", () => {
+  it("renders with default text", () => {
     const { getByText } = render(<Loading />);
-    expect(getByText("Loading...")).toBeInTheDocument();
+    expect(getByText("Loading…")).toBeInTheDocument();
   });
 
   it("renders with custom text", () => {
@@ -59,7 +53,7 @@ describe("Loading", () => {
 
   it("renders without text when empty string", () => {
     const { queryByText } = render(<Loading text="" />);
-    expect(queryByText("Loading...")).not.toBeInTheDocument();
+    expect(queryByText("Loading…")).not.toBeInTheDocument();
   });
 
   it("applies custom className", () => {
@@ -74,7 +68,7 @@ describe("Loading", () => {
 
   it("renders waveform variant by default", () => {
     const { container } = render(<Loading />);
-    expect(container.querySelector(".waveform-bar")).toBeInTheDocument();
+    expect(container.querySelector(".meter-cell")).toBeInTheDocument();
   });
 
   it("renders spinner variant", () => {
@@ -84,21 +78,21 @@ describe("Loading", () => {
 
   it("renders equalizer variant", () => {
     const { container } = render(<Loading variant="equalizer" />);
-    expect(container.querySelector(".equalizer")).toBeInTheDocument();
+    expect(container.querySelector(".meter-cell")).toBeInTheDocument();
   });
 });
 
 describe("WaveformLoader", () => {
-  it("renders waveform bars", () => {
+  it("renders meter cells", () => {
     const { container } = render(<WaveformLoader />);
-    const bars = container.querySelectorAll(".waveform-bar");
-    expect(bars.length).toBe(5);
+    const cells = container.querySelectorAll(".meter-cell");
+    expect(cells.length).toBe(5);
   });
 
-  it("renders custom number of bars", () => {
+  it("renders custom number of cells", () => {
     const { container } = render(<WaveformLoader bars={3} />);
-    const bars = container.querySelectorAll(".waveform-bar");
-    expect(bars.length).toBe(3);
+    const cells = container.querySelectorAll(".meter-cell");
+    expect(cells.length).toBe(3);
   });
 
   it("applies custom className", () => {
@@ -108,15 +102,15 @@ describe("WaveformLoader", () => {
 });
 
 describe("EqualizerLoader", () => {
-  it("renders equalizer bars", () => {
+  it("renders meter cells", () => {
     const { container } = render(<EqualizerLoader />);
-    const bars = container.querySelectorAll(".equalizer-bar");
-    expect(bars.length).toBe(5);
+    const cells = container.querySelectorAll(".meter-cell");
+    expect(cells.length).toBe(5);
   });
 
-  it("has equalizer class", () => {
+  it("has meter class", () => {
     const { container } = render(<EqualizerLoader />);
-    expect(container.firstChild).toHaveClass("equalizer");
+    expect(container.firstChild).toHaveClass("meter");
   });
 
   it("applies custom className", () => {
@@ -126,35 +120,13 @@ describe("EqualizerLoader", () => {
 });
 
 describe("Skeleton", () => {
-  it("renders with text variant by default", () => {
+  it("renders a pulsing placeholder", () => {
     const { container } = render(<Skeleton />);
-    expect(container.firstChild).toHaveClass("h-4", "rounded");
-  });
-
-  it("renders with circular variant", () => {
-    const { container } = render(<Skeleton variant="circular" />);
-    expect(container.firstChild).toHaveClass("rounded-full");
-  });
-
-  it("renders with rectangular variant", () => {
-    const { container } = render(<Skeleton variant="rectangular" />);
-    expect(container.firstChild).toHaveClass("rounded-xl");
-  });
-
-  it("has shimmer animation", () => {
-    const { container } = render(<Skeleton />);
-    expect(container.firstChild).toHaveClass("shimmer");
+    expect(container.firstChild).toHaveClass("animate-pulse", "rounded-md", "bg-elevated");
   });
 
   it("applies custom className", () => {
     const { container } = render(<Skeleton className="custom-skeleton" />);
     expect(container.firstChild).toHaveClass("custom-skeleton");
-  });
-
-  it("accepts width and height props", () => {
-    const { container } = render(<Skeleton width={100} height={50} />);
-    const skeleton = container.firstChild as HTMLElement;
-    expect(skeleton.style.width).toBe("100px");
-    expect(skeleton.style.height).toBe("50px");
   });
 });

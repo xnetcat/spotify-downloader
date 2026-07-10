@@ -1,6 +1,51 @@
-import { forwardRef, useState, useRef } from "react";
-import { clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { forwardRef } from "react";
+import * as SliderPrimitive from "@radix-ui/react-slider";
+import { cn } from "@/lib/utils";
+
+interface TrackProps {
+  values: number[];
+  min: number;
+  max: number;
+  step: number;
+  disabled?: boolean;
+  onValueChange: (values: number[]) => void;
+  className?: string;
+  "aria-label"?: string;
+}
+
+/** Shared Radix track: segmented-flat, amber range, one thumb per value. */
+function SliderTrack({ values, min, max, step, disabled, onValueChange, className }: TrackProps) {
+  return (
+    <SliderPrimitive.Root
+      value={values}
+      min={min}
+      max={max}
+      step={step}
+      disabled={disabled}
+      onValueChange={onValueChange}
+      className={cn(
+        "relative flex w-full touch-none select-none items-center",
+        disabled && "opacity-50",
+        className
+      )}
+    >
+      <SliderPrimitive.Track className="relative h-1.5 w-full grow overflow-hidden rounded-full bg-elevated">
+        <SliderPrimitive.Range className="absolute h-full bg-primary" />
+      </SliderPrimitive.Track>
+      {values.map((_, i) => (
+        <SliderPrimitive.Thumb
+          key={i}
+          className={cn(
+            "block size-4 rounded-full border border-primary bg-background shadow-sm",
+            "transition-colors outline-none",
+            "focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            "disabled:pointer-events-none"
+          )}
+        />
+      ))}
+    </SliderPrimitive.Root>
+  );
+}
 
 export interface SliderProps {
   /** Current value */
@@ -47,105 +92,37 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(
     },
     ref
   ) => {
-    const [isDragging, setIsDragging] = useState(false);
-    const trackRef = useRef<HTMLDivElement>(null);
-
-    // Calculate percentage for fill
-    const percentage = ((value - min) / (max - min)) * 100;
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      onChange(parseFloat(e.target.value));
-    };
-
     return (
-      <div className={twMerge("w-full", className)}>
-        {/* Label and value row */}
+      <div className={cn("w-full", className)}>
         {(label || showValue) && (
-          <div className="flex items-center justify-between mb-2">
+          <div className="mb-2 flex items-center justify-between">
             {label && (
-              <label
-                htmlFor={id}
-                className="text-sm font-medium text-[var(--color-text-secondary)]"
-              >
+              <label htmlFor={id} className="text-sm font-medium text-muted-foreground">
                 {label}
               </label>
             )}
             {showValue && (
-              <span className="text-sm font-mono text-[var(--color-text-muted)]">
+              <span className="font-mono tnum text-sm text-muted-foreground">
                 {formatValue(value)}
               </span>
             )}
           </div>
         )}
 
-        {/* Slider container */}
-        <div className="relative" ref={trackRef}>
-          {/* Custom track background */}
-          <div
-            className={clsx(
-              "absolute inset-y-0 left-0 right-0 my-auto h-2 rounded-full",
-              "bg-[var(--bg-surface)]"
-            )}
-          />
+        <SliderTrack
+          values={[value]}
+          min={min}
+          max={max}
+          step={step}
+          disabled={disabled}
+          onValueChange={([v]) => onChange(v)}
+        />
 
-          {/* Fill track */}
-          <div
-            className={clsx(
-              "absolute inset-y-0 left-0 my-auto h-2 rounded-full",
-              "bg-gradient-to-r from-[var(--accent-safe)] to-[var(--accent-cool)]",
-              "transition-[width] duration-75 ease-out"
-            )}
-            style={{ width: `${percentage}%` }}
-          />
+        <input ref={ref} type="hidden" id={id} name={name} value={value} readOnly />
 
-          {/* Native range input */}
-          <input
-            ref={ref}
-            type="range"
-            id={id}
-            name={name}
-            min={min}
-            max={max}
-            step={step}
-            value={value}
-            onChange={handleInputChange}
-            disabled={disabled}
-            onMouseDown={() => setIsDragging(true)}
-            onMouseUp={() => setIsDragging(false)}
-            onTouchStart={() => setIsDragging(true)}
-            onTouchEnd={() => setIsDragging(false)}
-            className={clsx(
-              "slider relative w-full h-2 appearance-none bg-transparent cursor-pointer",
-              "focus:outline-none",
-              disabled && "opacity-50 cursor-not-allowed",
-              // Webkit thumb styling
-              "[&::-webkit-slider-thumb]:appearance-none",
-              "[&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4",
-              "[&::-webkit-slider-thumb]:rounded-full",
-              "[&::-webkit-slider-thumb]:bg-white",
-              "[&::-webkit-slider-thumb]:shadow-lg",
-              "[&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:duration-150",
-              "[&::-webkit-slider-thumb]:hover:scale-110",
-              isDragging && "[&::-webkit-slider-thumb]:scale-110",
-              // Firefox thumb styling
-              "[&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4",
-              "[&::-moz-range-thumb]:rounded-full",
-              "[&::-moz-range-thumb]:bg-white",
-              "[&::-moz-range-thumb]:border-none",
-              "[&::-moz-range-thumb]:shadow-lg",
-              "[&::-moz-range-thumb]:cursor-pointer"
-            )}
-          />
-        </div>
-
-        {/* Min/Max labels */}
-        <div className="flex items-center justify-between mt-1">
-          <span className="text-xs text-[var(--color-text-dim)]">
-            {formatValue(min)}
-          </span>
-          <span className="text-xs text-[var(--color-text-dim)]">
-            {formatValue(max)}
-          </span>
+        <div className="mt-1 flex items-center justify-between">
+          <span className="font-mono tnum text-xs text-faint">{formatValue(min)}</span>
+          <span className="font-mono tnum text-xs text-faint">{formatValue(max)}</span>
         </div>
       </div>
     );
@@ -191,89 +168,25 @@ export function RangeSlider({
 }: RangeSliderProps) {
   const [rangeMin, rangeMax] = value;
 
-  const minPercentage = ((rangeMin - min) / (max - min)) * 100;
-  const maxPercentage = ((rangeMax - min) / (max - min)) * 100;
-
-  const handleMinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newMin = Math.min(parseFloat(e.target.value), rangeMax - step);
-    onChange([newMin, rangeMax]);
-  };
-
-  const handleMaxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newMax = Math.max(parseFloat(e.target.value), rangeMin + step);
-    onChange([rangeMin, newMax]);
-  };
-
   return (
-    <div className={twMerge("w-full", className)}>
-      {/* Label and value row */}
+    <div className={cn("w-full", className)}>
       {label && (
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-[var(--color-text-secondary)]">
-            {label}
-          </span>
-          <span className="text-sm font-mono text-[var(--color-text-muted)]">
-            {formatValue(rangeMin)} - {formatValue(rangeMax)}
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-sm font-medium text-muted-foreground">{label}</span>
+          <span className="font-mono tnum text-sm text-muted-foreground">
+            {formatValue(rangeMin)} – {formatValue(rangeMax)}
           </span>
         </div>
       )}
 
-      {/* Slider container */}
-      <div className="relative h-2">
-        {/* Track background */}
-        <div className="absolute inset-0 rounded-full bg-[var(--bg-surface)]" />
-
-        {/* Fill track */}
-        <div
-          className="absolute inset-y-0 rounded-full bg-gradient-to-r from-[var(--accent-safe)] to-[var(--accent-cool)]"
-          style={{
-            left: `${minPercentage}%`,
-            right: `${100 - maxPercentage}%`,
-          }}
-        />
-
-        {/* Min input */}
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={rangeMin}
-          onChange={handleMinChange}
-          disabled={disabled}
-          className={clsx(
-            "absolute inset-0 w-full h-full appearance-none bg-transparent cursor-pointer",
-            "pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto",
-            "[&::-webkit-slider-thumb]:appearance-none",
-            "[&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4",
-            "[&::-webkit-slider-thumb]:rounded-full",
-            "[&::-webkit-slider-thumb]:bg-white",
-            "[&::-webkit-slider-thumb]:shadow-lg",
-            disabled && "opacity-50"
-          )}
-        />
-
-        {/* Max input */}
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={rangeMax}
-          onChange={handleMaxChange}
-          disabled={disabled}
-          className={clsx(
-            "absolute inset-0 w-full h-full appearance-none bg-transparent cursor-pointer",
-            "pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto",
-            "[&::-webkit-slider-thumb]:appearance-none",
-            "[&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4",
-            "[&::-webkit-slider-thumb]:rounded-full",
-            "[&::-webkit-slider-thumb]:bg-white",
-            "[&::-webkit-slider-thumb]:shadow-lg",
-            disabled && "opacity-50"
-          )}
-        />
-      </div>
+      <SliderTrack
+        values={[rangeMin, rangeMax]}
+        min={min}
+        max={max}
+        step={step}
+        disabled={disabled}
+        onValueChange={(vals) => onChange([vals[0], vals[1]])}
+      />
     </div>
   );
 }

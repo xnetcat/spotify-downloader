@@ -1,5 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
+import { motion } from "motion/react";
+import { Download, Upload, TriangleAlert, Check } from "lucide-react";
 import { useAuthStore } from "@/stores/auth";
 import {
   useExportMatches,
@@ -12,25 +14,24 @@ import {
   type MatchStatus,
 } from "@/api";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
   Button,
   Select,
   Spinner,
   Input,
+  Textarea,
+  Alert,
+  AlertTitle,
+  AlertDescription,
 } from "@/components/ui";
 import { useToast } from "@/components/ui/toast";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/import")({
   component: AdminImportPage,
 });
 
 function downloadJson(data: unknown, filename: string) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], {
-    type: "application/json",
-  });
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -41,23 +42,84 @@ function downloadJson(data: unknown, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+function Section({
+  title,
+  description,
+  danger,
+  children,
+}: {
+  title: string;
+  description: string;
+  danger?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <section>
+      <h2
+        className={cn(
+          "text-[0.8125rem] font-semibold uppercase tracking-wider",
+          danger ? "text-destructive" : "text-foreground"
+        )}
+      >
+        {title}
+      </h2>
+      <p className="mt-1.5 text-sm text-muted-foreground">{description}</p>
+      <div className="mt-4">{children}</div>
+    </section>
+  );
+}
+
+function Tool({
+  title,
+  description,
+  danger,
+  children,
+}: {
+  title: string;
+  description: string;
+  danger?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-lg border bg-card p-4",
+        danger ? "border-destructive/30 bg-destructive/5" : "border-border"
+      )}
+    >
+      <h3 className="font-medium text-foreground">{title}</h3>
+      <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+      <div className="mt-3">{children}</div>
+    </div>
+  );
+}
+
+function Stat({ label, value, tone }: { label: string; value: number; tone?: "warning" | "destructive" }) {
+  return (
+    <div className="rounded-md bg-elevated p-2 text-center">
+      <div
+        className={cn(
+          "font-mono text-lg font-semibold tabular-nums",
+          tone === "warning" ? "text-warning" : tone === "destructive" ? "text-destructive" : "text-foreground"
+        )}
+      >
+        {value.toLocaleString()}
+      </div>
+      <div className="text-xs text-faint">{label}</div>
+    </div>
+  );
+}
+
 function AdminImportPage() {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuthStore();
   const { addToast } = useToast();
 
-  const [matchExportStatus, setMatchExportStatus] = useState<MatchStatus | "">(
-    ""
-  );
+  const [matchExportStatus, setMatchExportStatus] = useState<MatchStatus | "">("");
   const [urlInput, setUrlInput] = useState("");
-  const [purgePreview, setPurgePreview] = useState<{
-    pending: number;
-    rejected: number;
-  } | null>(null);
-  const [resetPreview, setResetPreview] = useState<{
-    entities: number;
-    relations: number;
-  } | null>(null);
+  const [importResult, setImportResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [purgePreview, setPurgePreview] = useState<{ pending: number; rejected: number } | null>(null);
+  const [resetPreview, setResetPreview] = useState<{ entities: number; relations: number } | null>(null);
   const [confirmReset, setConfirmReset] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -70,7 +132,6 @@ function AdminImportPage() {
   const purgeMutation = usePurgeUnverifiedMatches();
   const resetMutation = useResetDatabase();
 
-  // Redirect non-admins
   useEffect(() => {
     if (!isAuthenticated) {
       navigate({ to: "/auth/login" });
@@ -81,15 +142,13 @@ function AdminImportPage() {
 
   const handleExportMatches = async () => {
     try {
-      const data = await exportMatchesMutation.mutateAsync(
-        matchExportStatus || undefined
-      );
+      const data = await exportMatchesMutation.mutateAsync(matchExportStatus || undefined);
       downloadJson(
         data,
         `matches-export-${matchExportStatus || "verified"}-${new Date().toISOString().split("T")[0]}.json`
       );
       addToast(`Exported ${data.count} matches`, "success");
-    } catch (err) {
+    } catch {
       addToast("Failed to export matches", "error");
     }
   };
@@ -97,12 +156,9 @@ function AdminImportPage() {
   const handleExportUsers = async () => {
     try {
       const data = await exportUsersMutation.mutateAsync();
-      downloadJson(
-        data,
-        `users-export-${new Date().toISOString().split("T")[0]}.json`
-      );
+      downloadJson(data, `users-export-${new Date().toISOString().split("T")[0]}.json`);
       addToast(`Exported ${data.count} users`, "success");
-    } catch (err) {
+    } catch {
       addToast("Failed to export users", "error");
     }
   };
@@ -110,12 +166,9 @@ function AdminImportPage() {
   const handleExportStats = async () => {
     try {
       const data = await exportStatsMutation.mutateAsync();
-      downloadJson(
-        data,
-        `statistics-export-${new Date().toISOString().split("T")[0]}.json`
-      );
+      downloadJson(data, `statistics-export-${new Date().toISOString().split("T")[0]}.json`);
       addToast("Statistics exported successfully", "success");
-    } catch (err) {
+    } catch {
       addToast("Failed to export statistics", "error");
     }
   };
@@ -129,22 +182,20 @@ function AdminImportPage() {
       const data = JSON.parse(text);
 
       if (!data.matches || !Array.isArray(data.matches)) {
+        setImportResult({ ok: false, message: "Invalid file format — expected { matches: [...] }" });
         addToast("Invalid file format - expected { matches: [...] }", "error");
         return;
       }
 
-      const result = await importMatchesMutation.mutateAsync({
-        matches: data.matches,
-      });
-      addToast(
-        `Imported ${result.imported} matches (${result.skipped} skipped)`,
-        "success"
-      );
-    } catch (err) {
+      const result = await importMatchesMutation.mutateAsync({ matches: data.matches });
+      const message = `Imported ${result.imported} matches (${result.skipped} skipped)`;
+      setImportResult({ ok: true, message });
+      addToast(message, "success");
+    } catch {
+      setImportResult({ ok: false, message: "Failed to import matches" });
       addToast("Failed to import matches", "error");
     }
 
-    // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -163,9 +214,12 @@ function AdminImportPage() {
 
     try {
       const result = await importUrlsMutation.mutateAsync({ urls });
-      addToast(`Resolved ${result.resolved} songs from ${urls.length} URLs`, "success");
+      const message = `Resolved ${result.resolved} songs from ${urls.length} URLs`;
+      setImportResult({ ok: true, message });
+      addToast(message, "success");
       setUrlInput("");
-    } catch (err) {
+    } catch {
+      setImportResult({ ok: false, message: "Failed to import URLs" });
       addToast("Failed to import URLs", "error");
     }
   };
@@ -177,7 +231,7 @@ function AdminImportPage() {
         pending: result.pending_matches || 0,
         rejected: result.rejected_matches || 0,
       });
-    } catch (err) {
+    } catch {
       addToast("Failed to get purge preview", "error");
     }
   };
@@ -187,7 +241,7 @@ function AdminImportPage() {
       const result = await purgeMutation.mutateAsync(true);
       addToast(`Purged ${result.deleted} unverified matches`, "success");
       setPurgePreview(null);
-    } catch (err) {
+    } catch {
       addToast("Failed to purge matches", "error");
     }
   };
@@ -199,7 +253,7 @@ function AdminImportPage() {
         entities: result.entities_to_delete || 0,
         relations: result.relations_to_delete || 0,
       });
-    } catch (err) {
+    } catch {
       addToast("Failed to get reset preview", "error");
     }
   };
@@ -209,13 +263,12 @@ function AdminImportPage() {
       addToast('Type "RESET" to confirm', "error");
       return;
     }
-
     try {
       await resetMutation.mutateAsync("RESET");
       addToast("Database reset complete", "success");
       setResetPreview(null);
       setConfirmReset("");
-    } catch (err) {
+    } catch {
       addToast("Failed to reset database", "error");
     }
   };
@@ -229,414 +282,250 @@ function AdminImportPage() {
   }
 
   return (
-    <div className="space-y-6 animate-slide-up">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-zinc-50">Import / Export Tools</h1>
-        <p className="text-zinc-400 mt-1">Manage data operations</p>
-      </div>
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+      className="space-y-10"
+    >
+      <header>
+        <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
+          Import / export
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">Manage data operations.</p>
+      </header>
 
-      {/* Export Options */}
-      <Card variant="bordered">
-        <CardHeader className="border-b border-zinc-800/50">
-          <CardTitle className="flex items-center gap-2">
-            <svg
-              className="w-5 h-5 text-accent-safe"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+      {/* Export */}
+      <Section title="Export data" description="Download data for backup or migration. All exports are JSON.">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <Tool title="Matches" description="Export matches filtered by status.">
+            <div className="flex gap-2">
+              <Select
+                options={[
+                  { value: "", label: "Verified (default)" },
+                  { value: "pending", label: "Pending" },
+                  { value: "rejected", label: "Rejected" },
+                ]}
+                value={matchExportStatus}
+                onChange={(e) => setMatchExportStatus(e.target.value as MatchStatus | "")}
+                className="flex-1"
               />
-            </svg>
-            Export Data
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-zinc-400 mb-4">
-            Export data for backup or migration purposes. All exports are in
-            JSON format.
-          </p>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Card variant="bordered" className="bg-zinc-900/50">
-              <CardContent className="py-4">
-                <h4 className="font-medium text-zinc-200 mb-1">
-                  Matches Export
-                </h4>
-                <p className="text-sm text-zinc-500 mb-3">
-                  Export matches filtered by status
-                </p>
-                <div className="flex gap-2">
-                  <Select
-                    options={[
-                      { value: "", label: "Verified (default)" },
-                      { value: "pending", label: "Pending" },
-                      { value: "rejected", label: "Rejected" },
-                    ]}
-                    value={matchExportStatus}
-                    onChange={(e) =>
-                      setMatchExportStatus(e.target.value as MatchStatus | "")
-                    }
-                    className="flex-1"
-                  />
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={handleExportMatches}
-                    isLoading={exportMatchesMutation.isPending}
-                  >
-                    Export
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-            <Card variant="bordered" className="bg-zinc-900/50">
-              <CardContent className="py-4">
-                <h4 className="font-medium text-zinc-200 mb-1">Users Export</h4>
-                <p className="text-sm text-zinc-500 mb-3">
-                  Export user data (no emails/passwords)
-                </p>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={handleExportUsers}
-                  isLoading={exportUsersMutation.isPending}
-                >
-                  Export Users
-                </Button>
-              </CardContent>
-            </Card>
-            <Card variant="bordered" className="bg-zinc-900/50">
-              <CardContent className="py-4">
-                <h4 className="font-medium text-zinc-200 mb-1">
-                  Statistics Export
-                </h4>
-                <p className="text-sm text-zinc-500 mb-3">
-                  Export analytics and statistics
-                </p>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={handleExportStats}
-                  isLoading={exportStatsMutation.isPending}
-                >
-                  Export Stats
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Import Options */}
-      <Card variant="bordered">
-        <CardHeader className="border-b border-zinc-800/50">
-          <CardTitle className="flex items-center gap-2">
-            <svg
-              className="w-5 h-5 text-accent-needle"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-              />
-            </svg>
-            Import Data
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-zinc-400 mb-4">
-            Import data from backups or other sources.
-          </p>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <Card variant="bordered" className="bg-zinc-900/50">
-              <CardContent className="py-4">
-                <h4 className="font-medium text-zinc-200 mb-1">
-                  Matches Import
-                </h4>
-                <p className="text-sm text-zinc-500 mb-3">
-                  Import matches from JSON file
-                </p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".json"
-                  onChange={handleFileImport}
-                  className="hidden"
-                  id="match-file-input"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                  isLoading={importMatchesMutation.isPending}
-                >
-                  <svg
-                    className="w-4 h-4 mr-2"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                    />
-                  </svg>
-                  Choose File
-                </Button>
-              </CardContent>
-            </Card>
-            <Card variant="bordered" className="bg-zinc-900/50">
-              <CardContent className="py-4">
-                <h4 className="font-medium text-zinc-200 mb-1">
-                  Bulk URL Import
-                </h4>
-                <p className="text-sm text-zinc-500 mb-3">
-                  Import songs from URL list (one per line)
-                </p>
-                <textarea
-                  value={urlInput}
-                  onChange={(e) => setUrlInput(e.target.value)}
-                  placeholder="https://open.spotify.com/track/...&#10;https://open.spotify.com/album/..."
-                  rows={4}
-                  className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-200 text-sm placeholder-zinc-500 focus:border-accent-needle focus:outline-none resize-none mb-3"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleBulkUrlImport}
-                  isLoading={importUrlsMutation.isPending}
-                  disabled={!urlInput.trim()}
-                >
-                  Queue Import
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Danger Zone */}
-      <Card variant="bordered" className="border-red-500/30 bg-red-950/5">
-        <CardHeader className="border-b border-red-500/20">
-          <CardTitle className="flex items-center gap-3 text-red-400">
-            <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleExportMatches}
+                isLoading={exportMatchesMutation.isPending}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
+                <Download className="size-4" />
+                Export
+              </Button>
             </div>
-            <div>
-              <span>Danger Zone</span>
-              <p className="text-sm font-normal text-zinc-500 mt-0.5">
-                These actions are irreversible. Please proceed with caution.
-              </p>
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Purge Unverified Matches */}
-          <div className={`relative rounded-xl border transition-all ${
-            purgePreview
-              ? "border-red-500/40 bg-red-950/20"
-              : "border-zinc-800 bg-zinc-900/50 hover:border-zinc-700"
-          }`}>
-            <div className="p-5">
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
-                  <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-zinc-100 mb-1">
-                    Purge Unverified Matches
-                  </h4>
-                  <p className="text-sm text-zinc-400">
-                    Delete all pending and rejected matches from the database. Verified matches will remain.
-                  </p>
+          </Tool>
 
-                  {purgePreview && (
-                    <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                      <div className="flex items-center gap-2 text-red-300 text-sm font-medium mb-2">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                        Deletion Preview
-                      </div>
-                      <div className="grid grid-cols-3 gap-3 text-sm">
-                        <div className="text-center p-2 rounded bg-zinc-900/50">
-                          <div className="text-lg font-bold text-amber-400">{purgePreview.pending}</div>
-                          <div className="text-xs text-zinc-500">Pending</div>
-                        </div>
-                        <div className="text-center p-2 rounded bg-zinc-900/50">
-                          <div className="text-lg font-bold text-red-400">{purgePreview.rejected}</div>
-                          <div className="text-xs text-zinc-500">Rejected</div>
-                        </div>
-                        <div className="text-center p-2 rounded bg-zinc-900/50">
-                          <div className="text-lg font-bold text-red-300">{purgePreview.pending + purgePreview.rejected}</div>
-                          <div className="text-xs text-zinc-500">Total</div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
+          <Tool title="Users" description="Export user data (no emails or passwords).">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleExportUsers}
+              isLoading={exportUsersMutation.isPending}
+            >
+              <Download className="size-4" />
+              Export users
+            </Button>
+          </Tool>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  {!purgePreview ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handlePurgePreview}
-                      isLoading={purgeMutation.isPending}
-                    >
-                      Preview
-                    </Button>
-                  ) : (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setPurgePreview(null)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={handlePurgeConfirm}
-                        isLoading={purgeMutation.isPending}
-                        className="bg-red-500 hover:bg-red-600 text-white border-0"
-                      >
-                        Confirm Purge
-                      </Button>
-                    </>
-                  )}
+          <Tool title="Statistics" description="Export analytics and statistics.">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleExportStats}
+              isLoading={exportStatsMutation.isPending}
+            >
+              <Download className="size-4" />
+              Export stats
+            </Button>
+          </Tool>
+        </div>
+      </Section>
+
+      {/* Import */}
+      <Section title="Import data" description="Import data from backups or other sources.">
+        {importResult && (
+          <Alert variant={importResult.ok ? "default" : "destructive"} className="mb-3">
+            <AlertTitle>{importResult.ok ? "Import complete" : "Import failed"}</AlertTitle>
+            <AlertDescription>{importResult.message}</AlertDescription>
+          </Alert>
+        )}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Tool title="Matches" description="Import matches from a JSON file.">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              onChange={handleFileImport}
+              className="hidden"
+              id="match-file-input"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              isLoading={importMatchesMutation.isPending}
+            >
+              <Upload className="size-4" />
+              Choose file
+            </Button>
+          </Tool>
+
+          <Tool title="Bulk URLs" description="Import songs from a URL list (one per line).">
+            <Textarea
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              placeholder={"https://open.spotify.com/track/…\nhttps://open.spotify.com/album/…"}
+              rows={4}
+              className="mb-3 resize-none font-mono text-xs"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBulkUrlImport}
+              isLoading={importUrlsMutation.isPending}
+              disabled={!urlInput.trim()}
+            >
+              Queue import
+            </Button>
+          </Tool>
+        </div>
+      </Section>
+
+      {/* Danger zone */}
+      <Section
+        title="Danger zone"
+        description="These actions are irreversible. Proceed with caution."
+        danger
+      >
+        <div className="space-y-3">
+          {/* Purge unverified */}
+          <Tool
+            title="Purge unverified matches"
+            description="Delete all pending and rejected matches. Verified matches remain."
+            danger
+          >
+            {purgePreview && (
+              <div className="mb-3 rounded-md border border-destructive/20 bg-destructive/10 p-3">
+                <div className="mb-2 flex items-center gap-2 text-sm font-medium text-destructive">
+                  <TriangleAlert className="size-4" />
+                  Deletion preview
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <Stat label="Pending" value={purgePreview.pending} tone="warning" />
+                  <Stat label="Rejected" value={purgePreview.rejected} tone="destructive" />
+                  <Stat
+                    label="Total"
+                    value={purgePreview.pending + purgePreview.rejected}
+                    tone="destructive"
+                  />
                 </div>
               </div>
+            )}
+            <div className="flex items-center gap-2">
+              {!purgePreview ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePurgePreview}
+                  isLoading={purgeMutation.isPending}
+                >
+                  Preview
+                </Button>
+              ) : (
+                <>
+                  <Button variant="ghost" size="sm" onClick={() => setPurgePreview(null)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={handlePurgeConfirm}
+                    isLoading={purgeMutation.isPending}
+                  >
+                    Confirm purge
+                  </Button>
+                </>
+              )}
             </div>
-          </div>
+          </Tool>
 
-          {/* Reset Database */}
-          <div className={`relative rounded-xl border transition-all ${
-            resetPreview
-              ? "border-red-500/40 bg-red-950/20"
-              : "border-zinc-800 bg-zinc-900/50 hover:border-zinc-700"
-          }`}>
-            <div className="p-5">
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
-                  <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
-                  </svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-zinc-100 mb-1">
-                    Reset Database
-                  </h4>
-                  <p className="text-sm text-zinc-400">
-                    Delete ALL songs, artists, albums, playlists, and matches. User accounts will be preserved.
+          {/* Reset database */}
+          <Tool
+            title="Reset database"
+            description="Delete ALL songs, artists, albums, playlists, and matches. Users are preserved."
+            danger
+          >
+            {resetPreview && (
+              <div className="mb-3 space-y-3">
+                <div className="rounded-md border border-destructive/20 bg-destructive/10 p-3">
+                  <div className="mb-2 flex items-center gap-2 text-sm font-medium text-destructive">
+                    <TriangleAlert className="size-4" />
+                    Deletion preview
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Stat label="Entities" value={resetPreview.entities} tone="destructive" />
+                    <Stat label="Relations" value={resetPreview.relations} tone="destructive" />
+                  </div>
+                  <p className="mt-2 text-center text-xs text-faint">
+                    + all related artists, albums, and playlists
                   </p>
-
-                  {resetPreview && (
-                    <div className="mt-4 space-y-3">
-                      <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                        <div className="flex items-center gap-2 text-red-300 text-sm font-medium mb-2">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                          </svg>
-                          Deletion Preview
-                        </div>
-                        <div className="grid grid-cols-2 gap-3 text-sm">
-                          <div className="text-center p-2 rounded bg-zinc-900/50">
-                            <div className="text-lg font-bold text-red-400">{resetPreview.entities.toLocaleString()}</div>
-                            <div className="text-xs text-zinc-500">Entities</div>
-                          </div>
-                          <div className="text-center p-2 rounded bg-zinc-900/50">
-                            <div className="text-lg font-bold text-red-400">{resetPreview.relations.toLocaleString()}</div>
-                            <div className="text-xs text-zinc-500">Relations</div>
-                          </div>
-                        </div>
-                        <p className="text-xs text-zinc-500 mt-2 text-center">
-                          + all related artists, albums, and playlists
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <Input
-                          type="text"
-                          placeholder='Type "RESET" to confirm'
-                          value={confirmReset}
-                          onChange={(e) => setConfirmReset(e.target.value.toUpperCase())}
-                          className="w-48 font-mono"
-                        />
-                        {confirmReset === "RESET" && (
-                          <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                      </div>
-                    </div>
-                  )}
                 </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  {!resetPreview ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleResetPreview}
-                      isLoading={resetMutation.isPending}
-                    >
-                      Preview
-                    </Button>
-                  ) : (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setResetPreview(null);
-                          setConfirmReset("");
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={handleResetConfirm}
-                        isLoading={resetMutation.isPending}
-                        disabled={confirmReset !== "RESET"}
-                        className="bg-red-500 hover:bg-red-600 text-white border-0 disabled:bg-zinc-700 disabled:text-zinc-400"
-                      >
-                        Reset Database
-                      </Button>
-                    </>
-                  )}
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="text"
+                    placeholder='Type "RESET" to confirm'
+                    value={confirmReset}
+                    onChange={(e) => setConfirmReset(e.target.value.toUpperCase())}
+                    className="w-48 font-mono"
+                  />
+                  {confirmReset === "RESET" && <Check className="size-5 text-success" />}
                 </div>
               </div>
+            )}
+            <div className="flex items-center gap-2">
+              {!resetPreview ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResetPreview}
+                  isLoading={resetMutation.isPending}
+                >
+                  Preview
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setResetPreview(null);
+                      setConfirmReset("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={handleResetConfirm}
+                    isLoading={resetMutation.isPending}
+                    disabled={confirmReset !== "RESET"}
+                  >
+                    Reset database
+                  </Button>
+                </>
+              )}
             </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+          </Tool>
+        </div>
+      </Section>
+    </motion.div>
   );
 }

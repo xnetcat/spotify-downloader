@@ -20,15 +20,24 @@ class NavItem(Widget):
         width: 100%;
         padding: 0 1;
         content-align: left middle;
+        color: #8b93a7;
     }
     NavItem:hover {
-        background: #2c2e32;
+        background: #262d3a;
+        color: #e8eaf0;
     }
     NavItem.active {
-        background: #1c1e20;
+        background: #171b24;
+        border-left: thick #f5a623;
+        color: #f5a623;
+        text-style: bold;
     }
     NavItem.active .nav-accent {
-        color: #e8764b;
+        color: #f5a623;
+    }
+    NavItem.active .nav-item-text {
+        color: #f5a623;
+        text-style: bold;
     }
     """
 
@@ -66,8 +75,8 @@ class NavRail(Widget):
     NavRail {
         dock: left;
         width: 22;
-        background: #161819;
-        border-right: solid #232326;
+        background: #12151c;
+        border-right: solid #1c222d;
         padding: 1 0;
     }
     NavRail.collapsed {
@@ -77,7 +86,7 @@ class NavRail(Widget):
         height: 3;
         width: 100%;
         content-align: center middle;
-        color: #e8764b;
+        color: #f5a623;
         text-style: bold;
         margin-bottom: 1;
     }
@@ -85,7 +94,7 @@ class NavRail(Widget):
         height: 1;
         width: 100%;
         margin: 1 0;
-        color: #232326;
+        color: #1c222d;
     }
     """
 

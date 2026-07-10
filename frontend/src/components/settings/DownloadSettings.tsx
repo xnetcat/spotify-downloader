@@ -1,14 +1,7 @@
 import { useSettingsStore } from "@/stores/settings";
 import type { AudioQuality, FilenameRestrict } from "@/stores/settings";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  Input,
-  Select,
-  Slider,
-} from "@/components/ui";
-import { SectionHeader } from "./SectionHeader";
+import { Input, Select, Slider } from "@/components/ui";
+import { SettingsSection, SettingRow, SettingBlock } from "./SettingsSection";
 import { useSettingsContext } from "./SettingsContext";
 
 const FORMAT_OPTIONS = [
@@ -21,7 +14,7 @@ const FORMAT_OPTIONS = [
 ];
 
 const QUALITY_OPTIONS = [
-  { value: "best", label: "Best Available" },
+  { value: "best", label: "Best available" },
   { value: "320k", label: "320 kbps" },
   { value: "256k", label: "256 kbps" },
   { value: "192k", label: "192 kbps" },
@@ -40,6 +33,9 @@ const RESTRICT_OPTIONS = [
   { value: "loose", label: "Loose (remove accents)" },
 ];
 
+const TEMPLATE_TOKENS =
+  "{artist} {artists} {title} {album} {album-artist} {year} {track_number} {genre} {isrc} {list-name} {list-position}";
+
 export function DownloadSettings() {
   const {
     audioFormat,
@@ -53,57 +49,36 @@ export function DownloadSettings() {
   } = useSettingsStore();
 
   const { changeSelect, changeInput, showSuccess, triggerAutoSave } = useSettingsContext();
+  const lossless = audioFormat === "flac" || audioFormat === "wav";
 
   return (
-    <Card variant="bordered" className="animate-slide-up">
-      <CardHeader>
-        <SectionHeader
-          icon={
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-              />
-            </svg>
-          }
-          iconBg="bg-gradient-to-br from-[var(--accent-safe)]/20 to-[var(--accent-cool)]/20"
-          iconColor="text-[var(--accent-safe)]"
-          title="Download Preferences"
-          description="Configure audio format, quality, and output settings"
+    <SettingsSection
+      id="download"
+      title="Download"
+      description="Audio format, quality, and where files land."
+    >
+      <SettingRow label="Audio format" help="Container and codec for downloaded files.">
+        <Select
+          options={FORMAT_OPTIONS}
+          value={audioFormat}
+          onChange={changeSelect("audioFormat", "Audio format")}
+          className="w-full sm:w-56"
         />
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Format & Quality Row */}
-        <div className="grid grid-cols-2 gap-4">
-          <Select
-            label="Audio Format"
-            options={FORMAT_OPTIONS}
-            value={audioFormat}
-            onChange={changeSelect("audioFormat", "Audio format")}
-          />
-          <Select
-            label="Audio Quality"
-            options={QUALITY_OPTIONS}
-            value={audioQuality}
-            onChange={changeSelect("audioQuality", "Audio quality")}
-          />
-        </div>
+      </SettingRow>
 
-        {/* Bitrate Slider - shows current quality visualization */}
+      <SettingRow label="Audio quality" help="Target bitrate ceiling for lossy formats.">
+        <Select
+          options={QUALITY_OPTIONS}
+          value={audioQuality}
+          onChange={changeSelect("audioQuality", "Audio quality")}
+          className="w-full sm:w-56"
+        />
+      </SettingRow>
+
+      <SettingBlock>
         <Slider
           label="Bitrate"
-          value={
-            audioQuality === "best"
-              ? 320
-              : parseInt(audioQuality.replace("k", ""))
-          }
+          value={audioQuality === "best" ? 320 : parseInt(audioQuality.replace("k", ""))}
           min={128}
           max={320}
           step={32}
@@ -114,76 +89,44 @@ export function DownloadSettings() {
             triggerAutoSave();
           }}
           formatValue={(v) => `${v} kbps`}
-          disabled={audioFormat === "flac" || audioFormat === "wav"}
+          disabled={lossless}
         />
-
-        {/* Output Template */}
-        <div>
-          <Input
-            label="Output Template"
-            value={outputTemplate}
-            onChange={changeInput("outputTemplate", "Output template")}
-            placeholder="{artist} - {title}"
-          />
-          <p className="text-xs text-[var(--color-text-dim)] mt-2">
-            Available:{" "}
-            <code className="text-[var(--color-text-muted)]">
-              {"{artist}"}
-            </code>
-            ,{" "}
-            <code className="text-[var(--color-text-muted)]">
-              {"{artists}"}
-            </code>
-            ,{" "}
-            <code className="text-[var(--color-text-muted)]">
-              {"{title}"}
-            </code>
-            ,{" "}
-            <code className="text-[var(--color-text-muted)]">
-              {"{album}"}
-            </code>
-            ,{" "}
-            <code className="text-[var(--color-text-muted)]">
-              {"{album-artist}"}
-            </code>
-            ,{" "}
-            <code className="text-[var(--color-text-muted)]">
-              {"{year}"}
-            </code>
-            ,{" "}
-            <code className="text-[var(--color-text-muted)]">
-              {"{track_number}"}
-            </code>
-            ,{" "}
-            <code className="text-[var(--color-text-muted)]">
-              {"{genre}"}
-            </code>
-            ,{" "}
-            <code className="text-[var(--color-text-muted)]">
-              {"{isrc}"}
-            </code>
-            ,{" "}
-            <code className="text-[var(--color-text-muted)]">
-              {"{list-name}"}
-            </code>
-            ,{" "}
-            <code className="text-[var(--color-text-muted)]">
-              {"{list-position}"}
-            </code>
+        {lossless && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Bitrate is fixed for lossless formats.
           </p>
-        </div>
+        )}
+      </SettingBlock>
 
-        {/* Output Location */}
+      <SettingRow
+        label="Output template"
+        help={
+          <>
+            Tokens:{" "}
+            <code className="font-mono text-foreground">{TEMPLATE_TOKENS}</code>
+          </>
+        }
+      >
         <Input
-          label="Output Directory"
+          value={outputTemplate}
+          onChange={changeInput("outputTemplate", "Output template")}
+          placeholder="{artist} - {title}"
+          className="w-full sm:w-64"
+        />
+      </SettingRow>
+
+      <SettingRow label="Output directory" help="Base folder for saved audio.">
+        <Input
           value={outputDirectory}
           onChange={changeInput("outputDirectory", "Output directory")}
           placeholder="~/Music/SpotDL"
+          className="w-full sm:w-64"
         />
+      </SettingRow>
 
-        {/* Concurrent Downloads Slider */}
+      <SettingBlock>
         <Slider
-          label="Concurrent Downloads"
+          label="Concurrent downloads"
           value={maxConcurrentDownloads}
           min={1}
           max={10}
@@ -195,28 +138,30 @@ export function DownloadSettings() {
           }}
           formatValue={(v) => `${v} download${v > 1 ? "s" : ""}`}
         />
+      </SettingBlock>
 
-        {/* Overwrite Mode */}
+      <SettingRow label="Existing files" help="What to do when a file already exists.">
         <Select
-          label="Existing Files"
           options={OVERWRITE_OPTIONS}
           value={overwrite}
           onChange={changeSelect("overwrite", "Existing files mode")}
+          className="w-full sm:w-56"
         />
+      </SettingRow>
 
-        {/* Filename Sanitization */}
+      <SettingRow label="Filename sanitization" help="Restrict characters in filenames.">
         <Select
-          label="Filename Sanitization"
           options={RESTRICT_OPTIONS}
           value={restrict ?? ""}
           onChange={(e) => {
             const val = e.target.value;
-            update("restrict", val ? val as FilenameRestrict : null);
+            update("restrict", val ? (val as FilenameRestrict) : null);
             showSuccess("Filename sanitization updated");
             triggerAutoSave();
           }}
+          className="w-full sm:w-56"
         />
-      </CardContent>
-    </Card>
+      </SettingRow>
+    </SettingsSection>
   );
 }
