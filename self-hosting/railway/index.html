@@ -1368,6 +1368,11 @@ from the linked plugins at deploy time.</p>
 <td>Operator's Spotify app credential.</td>
 </tr>
 <tr>
+<td><code>SPOTDL_SPOTIFY_PREFER_ANONYMOUS</code></td>
+<td><code>false</code></td>
+<td><strong>Required on datacenter IPs.</strong> The provider defaults to the anonymous web-player token (right for residential self-hosts), but Spotify persistently 429s anonymous API calls from cloud-provider IPs — and because the anon <em>token fetch</em> still succeeds, the client-credentials fallback never engages. <code>false</code> makes the operator credentials primary; anonymous becomes the fallback.</td>
+</tr>
+<tr>
 <td><code>SPOTDL_SENTRY_DSN</code></td>
 <td><code>&lt;optional&gt;</code></td>
 <td>Error reporting; blank disables.</td>
